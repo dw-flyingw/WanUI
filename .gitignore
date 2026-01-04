@@ -3,6 +3,7 @@
 output/
 CLAUDE.md
 GEMIMI.md
+*.whl
 
 
 # Byte-compiled / optimized / DLL files
