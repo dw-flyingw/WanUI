@@ -2,33 +2,42 @@
 Sidebar utilities for consistent branding across pages.
 """
 
+import sys
 from pathlib import Path
+
 import streamlit as st
+
+# Add assets directory to path for badge imports
+assets_path = Path(__file__).parent.parent / "assets"
+if assets_path.exists() and str(assets_path) not in sys.path:
+    sys.path.insert(0, str(assets_path))
+
+from assets import render_hpe_badge, render_wan22_badge
 
 
 def render_sidebar_header():
     """
     Render the WanUI Studio header at the TOP of the sidebar (above navigation).
-    Uses st.logo() to place large logo above the navigation menu.
     Call this at the start of each page for consistent branding.
     """
-    logo_path = Path(__file__).parent.parent / "assets" / "logo.png"
+    pass
 
-    # Use st.logo() to place large logo at the very top of sidebar (above navigation)
-    if logo_path.exists():
-        st.logo(str(logo_path), size="large")  # Large size, full width
 
-    # Add title and tagline in sidebar (will appear above page-specific content, below logo)
+def render_sidebar_footer():
+    """
+    Render the sidebar footer with Wan2.2 and HPE PCAI badges at the bottom.
+    Call this at the end of sidebar content on each page.
+    """
     with st.sidebar:
-        st.markdown(
-            """
-            <div style="text-align: center; padding: 0 0 0.75rem 0; margin-top: -0.5rem;">
-                <h3 style="margin: 0.5rem 0;">WanUI Studio</h3>
-                <p style="font-size: 0.9rem; color: #888; margin: 0.25rem 0; line-height: 1.4;">
-                    Professional Video Generation<br/>with Wan2.2 Models
-                </p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        # Add spacing before footer
+        st.markdown("<br>", unsafe_allow_html=True)
         st.divider()
+
+        # Render Wan2.2 badge
+        render_wan22_badge()
+
+        # Small spacing between badges
+        st.markdown("<div style='margin: 0.5rem 0;'></div>", unsafe_allow_html=True)
+
+        # Render HPE badge
+        render_hpe_badge()
