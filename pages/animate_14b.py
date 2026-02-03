@@ -60,34 +60,50 @@ with st.sidebar:
         help="Animation: Mimics motion from video. Replacement: Replaces person in video.",
     )
 
-    # Auto-select optimal settings
-    available_gpus = get_available_gpus()
-    num_gpus = min(2, available_gpus)
+    # Auto-select optimal defaults
     resolution = CONFIG["default_size"]
     res_parts = resolution.split("*")
     resolution_tuple = (int(res_parts[0]), int(res_parts[1]))
     fps = CONFIG["sample_fps"]
+    refert_num = 5
 
     # Preprocessing options - use defaults based on mode
-    if mode == "animation":
-        use_retarget = False
-        use_flux = False
-        iterations, k, w_len, h_len = 3, 7, 1, 1
-    else:  # replacement mode
-        use_retarget = False
-        use_flux = False
-        iterations, k, w_len, h_len = 3, 7, 1, 1
-
-    # Generation options
-    refert_num = 5
-    sample_steps = CONFIG["default_steps"]
-    sample_solver = "unipc"
-    seed = -1
+    iterations, k, w_len, h_len = 3, 7, 1, 1
+    use_retarget = False
+    use_flux = False
     use_relighting_lora = False
+
+    # GPU selection
+    available_gpus = get_available_gpus()
+    num_gpus = st.slider(
+        "Number of GPUs",
+        min_value=1,
+        max_value=available_gpus,
+        value=min(2, available_gpus),
+        help=f"Available GPUs: {available_gpus}",
+    )
 
     st.divider()
 
-    # Prompt extension option
+    # Sampling settings
+    st.subheader("Quality Settings")
+
+    sample_steps = st.slider(
+        "Sampling steps",
+        min_value=10,
+        max_value=50,
+        value=CONFIG["default_steps"],
+        help="More steps = better quality but slower",
+    )
+
+    sample_solver = st.selectbox("Solver", ["unipc", "dpm++"], index=0)
+
+    seed = st.number_input("Seed", min_value=-1, max_value=2147483647, value=-1, help="-1 for random")
+
+    st.divider()
+
+# Prompt extension handled by button in main area
+use_prompt_extend = False
     st.subheader("Prompt Extension")
     use_prompt_extend = st.checkbox(
         "Enable prompt extension",

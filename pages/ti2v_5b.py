@@ -62,30 +62,60 @@ mode = st.radio(
 st.session_state[f"{TASK_KEY}_mode"] = mode
 
 # Sidebar configuration
-# Auto-select optimal settings
-available_gpus = get_available_gpus()
-num_gpus = min(2, available_gpus)
+# Auto-select optimal defaults
 resolution = CONFIG["default_size"]
-sample_steps = CONFIG["default_steps"]
-sample_shift = CONFIG["default_shift"]
-sample_guide_scale = CONFIG["default_guide_scale"]
-sample_solver = "unipc"
-seed = -1
 
 with st.sidebar:
+    st.header("Settings")
+
+    # GPU selection
+    available_gpus = get_available_gpus()
+    num_gpus = st.slider(
+        "Number of GPUs",
+        min_value=1,
+        max_value=available_gpus,
+        value=min(2, available_gpus),
+        help=f"Available GPUs: {available_gpus}",
+    )
+
     st.divider()
 
-    # Prompt extension option
-    st.subheader("Prompt Extension")
-    use_prompt_extend = st.checkbox(
-        "Enable prompt extension",
-        value=True,
-        help=f"Method: {PROMPT_EXTEND_METHOD}",
+    # Sampling settings
+    st.subheader("Quality Settings")
+
+    sample_steps = st.slider(
+        "Sampling steps",
+        min_value=10,
+        max_value=50,
+        value=CONFIG["default_steps"],
+        help="More steps = better quality but slower",
     )
-    if use_prompt_extend and PROMPT_EXTEND_MODEL:
-        st.caption(f"Using `{PROMPT_EXTEND_METHOD}` method")
-    elif use_prompt_extend and not PROMPT_EXTEND_MODEL:
-        st.warning("PROMPT_EXTEND_MODEL not set in .env")
+
+    sample_shift = st.slider(
+        "Sample shift",
+        min_value=1.0,
+        max_value=20.0,
+        value=CONFIG["default_shift"],
+        step=0.5,
+    )
+
+    sample_guide_scale = st.slider(
+        "Guidance scale",
+        min_value=1.0,
+        max_value=10.0,
+        value=CONFIG["default_guide_scale"],
+        step=0.5,
+        help="Higher = more prompt adherence",
+    )
+
+    sample_solver = st.selectbox("Solver", ["unipc", "dpm++"], index=0)
+
+    seed = st.number_input("Seed", min_value=-1, max_value=2147483647, value=-1, help="-1 for random")
+
+    st.divider()
+
+# Prompt extension handled by button in main area
+use_prompt_extend = False
 
 # Project name
 st.subheader("Project")
