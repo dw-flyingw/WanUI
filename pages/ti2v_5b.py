@@ -74,7 +74,7 @@ with st.sidebar:
         "Number of GPUs",
         min_value=1,
         max_value=available_gpus,
-        value=min(2, available_gpus),
+        value=1,
         help=f"Available GPUs: {available_gpus}",
     )
 
