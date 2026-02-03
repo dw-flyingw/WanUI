@@ -10,7 +10,6 @@ import streamlit as st
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from utils.common import get_available_gpus
 from utils.history import OutputHistory
 from utils.sidebar import render_sidebar_header, render_sidebar_footer
 from utils.theme import load_custom_theme
@@ -40,21 +39,6 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
-
-# GPU Status Widget
-available_gpus = get_available_gpus()
-col1, col2, col3 = st.columns([2, 1, 1])
-
-with col1:
-    st.metric("Available GPUs", available_gpus, help="Number of CUDA devices detected")
-
-with col2:
-    st.metric("Models", "5", help="5 different video generation models")
-
-with col3:
-    st.metric("Max Resolution", "1280x720", help="Up to 720P resolution")
-
-st.divider()
 
 # Recent Outputs Section
 st.markdown("### Recent Outputs")
