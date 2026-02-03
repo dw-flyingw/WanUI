@@ -1,0 +1,19 @@
+# Wan2.2 Repo Location (relative to this project or absolute path)
+# Points to the clean, unmodified Wan2.2 clone
+WAN2_2_REPO=../Wan2.2
+
+# Output folder for generated projects (relative to repo root or absolute path)
+OUTPUT_PATH=./output
+
+# Path to model weights (Wan2.2-Animate-14B, Wan2.2-T2V-A14B, etc.)
+MODELS_PATH=/opt/huggingface
+
+# Prompt extension settings
+# Method: openai, local_qwen, or dashscope
+PROMPT_EXTEND_METHOD=openai
+
+# Target language: en or zh
+PROMPT_EXTEND_LANG=en
+
+# LLM endpoint (for openai method) or model name (for local_qwen)
+PROMPT_EXTEND_MODEL=http://llama-33-70b-instruct.models.mlds-kserve.hst.rdlabs.hpecorp.net/v1
