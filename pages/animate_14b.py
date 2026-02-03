@@ -95,18 +95,7 @@ with st.sidebar:
 
     st.divider()
 
-# Prompt extension handled by button in main area
-use_prompt_extend = False
-    st.subheader("Prompt Extension")
-    use_prompt_extend = st.checkbox(
-        "Enable prompt extension",
-        value=True,
-        help=f"Method: {PROMPT_EXTEND_METHOD}",
-    )
-    if use_prompt_extend and PROMPT_EXTEND_MODEL:
-        st.caption(f"Using `{PROMPT_EXTEND_METHOD}` method")
-    elif use_prompt_extend and not PROMPT_EXTEND_MODEL:
-        st.warning("PROMPT_EXTEND_MODEL not set in .env")
+# Prompt extension available via button in main area
 
 # Main content - Media inputs
 col1, col2 = st.columns(2)
@@ -181,7 +170,7 @@ prompt = st.text_area(
 # Prompt extension button
 col1, col2 = st.columns([1, 4])
 with col1:
-    extend_clicked = st.button("Extend Prompt", disabled=not use_prompt_extend or not PROMPT_EXTEND_MODEL)
+    extend_clicked = st.button("Extend Prompt", disabled=not PROMPT_EXTEND_MODEL)
 
 if extend_clicked:
     with st.spinner("Extending prompt..."):

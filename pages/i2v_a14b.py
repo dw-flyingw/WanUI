@@ -95,8 +95,7 @@ with st.sidebar:
 
     st.divider()
 
-# Prompt extension handled by button in main area
-use_prompt_extend = False
+# Prompt extension available via button in main area
 
 # Input image
 st.subheader("Input Image")
@@ -138,7 +137,7 @@ prompt = st.text_area(
 # Prompt extension button
 col1, col2 = st.columns([1, 4])
 with col1:
-    extend_clicked = st.button("Extend Prompt", disabled=not use_prompt_extend or not PROMPT_EXTEND_MODEL)
+    extend_clicked = st.button("Extend Prompt", disabled=not PROMPT_EXTEND_MODEL)
 
 if extend_clicked:
     with st.spinner("Extending prompt..."):
