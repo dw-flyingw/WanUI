@@ -94,10 +94,35 @@ with st.sidebar:
         use_retarget = False
         use_flux = False
         st.markdown("**Mask parameters:**")
-        iterations = st.number_input("Dilation iterations", min_value=1, max_value=10, value=3)
-        k = st.number_input("Kernel size", min_value=3, max_value=15, value=7, step=2)
-        w_len = st.number_input("W subdivisions", min_value=1, max_value=5, value=1)
-        h_len = st.number_input("H subdivisions", min_value=1, max_value=5, value=1)
+        iterations = st.number_input(
+            "Dilation iterations",
+            min_value=1,
+            max_value=10,
+            value=3,
+            help="Number of times to expand the mask. Higher values create a larger buffer zone around the person for cleaner compositing.",
+        )
+        k = st.number_input(
+            "Kernel size",
+            min_value=3,
+            max_value=15,
+            value=7,
+            step=2,
+            help="Size of the dilation kernel in pixels (e.g., 7 means 7x7). Larger kernel expands the mask more per iteration.",
+        )
+        w_len = st.number_input(
+            "W subdivisions",
+            min_value=1,
+            max_value=5,
+            value=1,
+            help="Horizontal grid divisions for mask augmentation. Higher values create finer mask segmentation.",
+        )
+        h_len = st.number_input(
+            "H subdivisions",
+            min_value=1,
+            max_value=5,
+            value=1,
+            help="Vertical grid divisions for mask augmentation. Higher values create finer mask segmentation.",
+        )
 
     st.divider()
 

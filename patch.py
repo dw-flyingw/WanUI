@@ -6,9 +6,11 @@ This script patches the upstream Wan2.2 repository with modifications
 required for this frontend to function properly.
 
 Patches:
-- generate.py: Adds OpenAI prompt extension support
+- generate.py: Adds OpenAI prompt extension support, English prompts
 - wan/utils/prompt_extend.py: Adds OpenAIPromptExpander class
 - wan/utils/system_prompt.py: Adds animate-specific system prompts
+- wan/configs/shared_config.py: English negative prompt
+- wan/configs/wan_animate_14B.py: English default prompt
 
 Usage:
     python patch.py patch     # Apply patches to Wan2.2 repo
@@ -33,6 +35,8 @@ PATCH_FILES = [
     "generate.py",
     "wan/utils/prompt_extend.py",
     "wan/utils/system_prompt.py",
+    "wan/configs/shared_config.py",
+    "wan/configs/wan_animate_14B.py",
 ]
 
 
