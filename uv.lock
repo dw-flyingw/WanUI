@@ -969,6 +969,16 @@ wheels = [
 ]
 
 [[package]]
+name = "flash-attn"
+version = "2.8.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "einops" },
+    { name = "torch" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/3b/b2/8d76c41ad7974ee264754709c22963447f7f8134613fd9ce80984ed0dab7/flash_attn-2.8.3.tar.gz", hash = "sha256:1e71dd64a9e0280e0447b8a0c2541bad4bf6ac65bdeaa2f90e51a9e57de0370d", size = 8447812, upload-time = "2025-08-15T08:28:12.911Z" }
+
+[[package]]
 name = "flatbuffers"
 version = "25.12.19"
 source = { registry = "https://pypi.org/simple" }
@@ -4740,7 +4750,7 @@ wheels = [
 ]
 
 [[package]]
-name = "wan2-frontend"
+name = "wanui"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
@@ -4752,6 +4762,7 @@ dependencies = [
     { name = "diffusers" },
     { name = "easydict" },
     { name = "flake8" },
+    { name = "flash-attn" },
     { name = "ftfy" },
     { name = "gdown" },
     { name = "gitpython" },
@@ -4786,7 +4797,6 @@ dependencies = [
     { name = "sentencepiece" },
     { name = "streamlit" },
     { name = "tokenizers" },
-    { name = "torch" },
     { name = "torchaudio" },
     { name = "torchvision" },
     { name = "tqdm" },
@@ -4805,6 +4815,7 @@ requires-dist = [
     { name = "diffusers", specifier = ">=0.31.0" },
     { name = "easydict" },
     { name = "flake8" },
+    { name = "flash-attn" },
     { name = "ftfy" },
     { name = "gdown" },
     { name = "gitpython" },
@@ -4839,7 +4850,6 @@ requires-dist = [
     { name = "sentencepiece" },
     { name = "streamlit", specifier = ">=1.41.0" },
     { name = "tokenizers", specifier = ">=0.20.3" },
-    { name = "torch", specifier = ">=2.4.0" },
     { name = "torchaudio" },
     { name = "torchvision", specifier = ">=0.19.0" },
     { name = "tqdm" },

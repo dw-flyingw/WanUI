@@ -1,15 +1,13 @@
 [project]
-name = "wan2-frontend"
+name = "wanui"
 version = "0.1.0"
-description = "Wan2.2 Streamlit Frontend"
+description = "WanUI - Wan2.2 Streamlit Frontend"
 readme = "README.md"
 requires-python = ">=3.10,<4.0"
 dependencies = [
     # Frontend
     "python-dotenv>=1.0.0",
     "streamlit>=1.41.0",
-    # Wan2.2 core dependencies
-    "torch>=2.4.0",
     "torchvision>=0.19.0",
     "torchaudio",
     "opencv-python>=4.9.0.80",
@@ -60,10 +58,9 @@ dependencies = [
     "huggingface-hub[cli]",
     "moviepy>=2.2.1",
     "sam2>=1.1.0",
+    "flash-attn",
 ]
 
-# flash_attn requires CUDA and special build - install separately:
-#   pip install flash-attn --no-build-isolation
 # SAM-2 requires git install:
 #   pip install git+https://github.com/facebookresearch/sam2.git@0e78a118995e66bb27d78518c4bd9a3e95b4e266
 
