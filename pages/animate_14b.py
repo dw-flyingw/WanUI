@@ -31,10 +31,14 @@ from utils.config import (
 from utils.generation import run_generation, run_preprocessing
 from utils.metadata import create_metadata
 from utils.prompt_utils import extend_prompt
+from utils.sidebar import render_sidebar_header
 
 TASK = "animate-14B"
 TASK_KEY = get_task_session_key(TASK)
 CONFIG = MODEL_CONFIGS[TASK]
+# Render sidebar header
+render_sidebar_header()
+
 
 st.title("Animate")
 st.markdown("Animate a character from reference image using motion from source video")

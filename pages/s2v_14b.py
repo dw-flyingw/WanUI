@@ -30,10 +30,14 @@ from utils.config import (
 from utils.generation import run_generation
 from utils.metadata import create_metadata
 from utils.prompt_utils import extend_prompt
+from utils.sidebar import render_sidebar_header
 
 TASK = "s2v-14B"
 TASK_KEY = get_task_session_key(TASK)
 CONFIG = MODEL_CONFIGS[TASK]
+# Render sidebar header
+render_sidebar_header()
+
 
 st.title("Speech to Video")
 st.markdown("Generate talking head video from audio and reference image using the S2V-14B model")

@@ -73,6 +73,24 @@ MODEL_CONFIGS = {
         "requires_audio": False,
         "requires_preprocessing": False,
     },
+    "ti2v-5B": {
+        "task": "ti2v-5B",
+        "name": "Text/Image to Video (Fast)",
+        "description": "Fast 720P generation at 24fps - supports both text-only and image+text input",
+        "checkpoint": f"{MODELS_PATH}/Wan2.2-TI2V-5B",
+        "sizes": ["1280*720", "720*1280"],
+        "default_size": "1280*720",
+        "default_steps": 30,
+        "default_shift": 8.0,
+        "default_guide_scale": 3.0,
+        "frame_num": 49,
+        "sample_fps": 24,
+        "requires_image": False,
+        "requires_video": False,
+        "requires_audio": False,
+        "requires_preprocessing": False,
+        "supports_both_t2v_i2v": True,
+    },
     "s2v-14B": {
         "task": "s2v-14B",
         "name": "Speech to Video",
@@ -124,6 +142,11 @@ DEFAULT_PROMPTS = {
         "The subject in the image comes to life with natural, fluid movement. "
         "Camera slowly pushes in as the scene unfolds with subtle environmental "
         "details like wind and light changes."
+    ),
+    "ti2v-5B": (
+        "A serene mountain landscape transforms as the golden hour light shifts "
+        "across the peaks. Clouds drift slowly, casting moving shadows. "
+        "Camera pans gently to reveal the full majesty of the scene."
     ),
     "s2v-14B": (
         "The person speaks expressively with natural lip movements and subtle "

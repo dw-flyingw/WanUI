@@ -1,0 +1,159 @@
+{
+  "_schema_version": "1.0",
+  "_description": "Example media library metadata. Add entries to this file to make media available in the UI.",
+  "_schema": {
+    "id": "Unique identifier for the example (string)",
+    "path": "Relative path from examples/ directory to the media file (string)",
+    "thumbnail": "Relative path from examples/ directory to the thumbnail image (string)",
+    "category": "Category of the media (e.g., 'portraits', 'landscapes', 'speech_samples')",
+    "tags": "Array of descriptive tags for filtering and search",
+    "description": "Human-readable description of the media",
+    "compatible_tasks": "Array of task IDs that can use this media (e.g., ['t2v-A14B', 'i2v-A14B'])",
+    "media_type": "Type of media: 'image', 'video', or 'audio'",
+    "metadata": "Optional object with additional info (resolution, duration, etc.)"
+  },
+  "examples": [
+    {
+      "id": "animate_reference_image",
+      "path": "images/wan_animate_samples/animate_reference.jpg",
+      "thumbnail": "thumbnails/images/wan_animate_samples/animate_reference_thumb.jpg",
+      "category": "wan_animate_samples",
+      "tags": ["person", "character", "animate-mode", "official-example"],
+      "description": "Official Wan2.2 example reference image for animation mode - use with animate_source video",
+      "compatible_tasks": ["animate-14B"],
+      "media_type": "image",
+      "metadata": {
+        "source": "Wan2.2 official examples",
+        "mode": "animation",
+        "recommended_pair": "animate_source"
+      }
+    },
+    {
+      "id": "animate_source_video",
+      "path": "videos/wan_animate_samples/animate_source.mp4",
+      "thumbnail": "thumbnails/videos/wan_animate_samples/animate_source_thumb.jpg",
+      "category": "wan_animate_samples",
+      "tags": ["motion", "source-video", "animate-mode", "official-example"],
+      "description": "Official Wan2.2 example source video for animation mode - use with animate_reference image",
+      "compatible_tasks": ["animate-14B"],
+      "media_type": "video",
+      "metadata": {
+        "source": "Wan2.2 official examples",
+        "mode": "animation",
+        "recommended_pair": "animate_reference_image"
+      }
+    },
+    {
+      "id": "replace_reference_image",
+      "path": "images/wan_animate_samples/replace_reference.jpg",
+      "thumbnail": "thumbnails/images/wan_animate_samples/replace_reference_thumb.jpg",
+      "category": "wan_animate_samples",
+      "tags": ["person", "character", "replace-mode", "official-example"],
+      "description": "Official Wan2.2 example reference image for replacement mode - use with replace_source video",
+      "compatible_tasks": ["animate-14B"],
+      "media_type": "image",
+      "metadata": {
+        "source": "Wan2.2 official examples",
+        "mode": "replacement",
+        "recommended_pair": "replace_source"
+      }
+    },
+    {
+      "id": "replace_source_video",
+      "path": "videos/wan_animate_samples/replace_source.mp4",
+      "thumbnail": "thumbnails/videos/wan_animate_samples/replace_source_thumb.jpg",
+      "category": "wan_animate_samples",
+      "tags": ["motion", "source-video", "replace-mode", "official-example"],
+      "description": "Official Wan2.2 example source video for replacement mode - use with replace_reference image",
+      "compatible_tasks": ["animate-14B"],
+      "media_type": "video",
+      "metadata": {
+        "source": "Wan2.2 official examples",
+        "mode": "replacement",
+        "recommended_pair": "replace_reference_image"
+      }
+    },
+    {
+      "id": "i2v_landscape_01",
+      "path": "images/landscapes/i2v_landscape_01.jpg",
+      "thumbnail": "thumbnails/images/landscapes/i2v_landscape_01_thumb.jpg",
+      "category": "landscapes",
+      "tags": ["landscape", "nature", "official-example"],
+      "description": "Official Wan2.2 example landscape image - great for I2V generation",
+      "compatible_tasks": ["i2v-A14B", "ti2v-5B"],
+      "media_type": "image",
+      "metadata": {
+        "source": "Wan2.2 official examples"
+      }
+    },
+    {
+      "id": "test_portrait_01",
+      "path": "images/portraits/test_portrait_01.jpg",
+      "thumbnail": "thumbnails/images/portraits/test_portrait_01_thumb.jpg",
+      "category": "portraits",
+      "tags": ["person", "portrait", "test"],
+      "description": "Test portrait image for S2V and Animate workflows",
+      "compatible_tasks": ["i2v-A14B", "ti2v-5B", "s2v-14B", "animate-14B"],
+      "media_type": "image",
+      "metadata": {
+        "note": "Existing test media"
+      }
+    },
+    {
+      "id": "pose_reference_01",
+      "path": "videos/motion_references/pose_reference_01.mp4",
+      "thumbnail": "thumbnails/videos/motion_references/pose_reference_01_thumb.jpg",
+      "category": "motion_references",
+      "tags": ["pose", "motion", "reference", "official-example"],
+      "description": "Official Wan2.2 pose reference video - use for pose-driven S2V generation",
+      "compatible_tasks": ["s2v-14B"],
+      "media_type": "video",
+      "metadata": {
+        "source": "Wan2.2 official examples",
+        "usage": "pose_video parameter in S2V"
+      }
+    },
+    {
+      "id": "test_video_01",
+      "path": "videos/test_videos/test_video_01.mp4",
+      "thumbnail": "thumbnails/videos/test_videos/test_video_01_thumb.jpg",
+      "category": "test_videos",
+      "tags": ["test", "motion"],
+      "description": "Test video clip for Animate workflows",
+      "compatible_tasks": ["animate-14B"],
+      "media_type": "video",
+      "metadata": {
+        "note": "Existing test media"
+      }
+    },
+    {
+      "id": "talk_sample_01",
+      "path": "audio/speech_samples/talk_sample_01.wav",
+      "thumbnail": "thumbnails/audio/speech_samples/talk_sample_01_thumb.png",
+      "category": "speech_samples",
+      "tags": ["speech", "talk", "clean", "official-example"],
+      "description": "Official Wan2.2 speech sample - clean talking audio for S2V",
+      "compatible_tasks": ["s2v-14B"],
+      "media_type": "audio",
+      "metadata": {
+        "source": "Wan2.2 official examples",
+        "type": "speech"
+      }
+    },
+    {
+      "id": "singing_sample_01",
+      "path": "audio/speech_samples/singing_sample_01.mp3",
+      "thumbnail": "thumbnails/audio/speech_samples/singing_sample_01_thumb.png",
+      "category": "speech_samples",
+      "tags": ["singing", "music", "official-example"],
+      "description": "Official Wan2.2 singing sample - 'Five Hundred Miles' for S2V with music",
+      "compatible_tasks": ["s2v-14B"],
+      "media_type": "audio",
+      "metadata": {
+        "source": "Wan2.2 official examples",
+        "type": "singing",
+        "song": "Five Hundred Miles"
+      }
+    }
+  ]
+}

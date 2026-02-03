@@ -29,10 +29,14 @@ from utils.config import (
 from utils.generation import run_generation
 from utils.metadata import create_metadata
 from utils.prompt_utils import extend_prompt
+from utils.sidebar import render_sidebar_header
 
 TASK = "t2v-A14B"
 TASK_KEY = get_task_session_key(TASK)
 CONFIG = MODEL_CONFIGS[TASK]
+# Render sidebar header
+render_sidebar_header()
+
 
 st.title("Text to Video")
 st.markdown("Generate video from text prompts using the T2V-A14B model")
