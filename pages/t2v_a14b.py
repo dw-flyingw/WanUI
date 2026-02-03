@@ -29,82 +29,41 @@ from utils.config import (
 from utils.generation import run_generation
 from utils.metadata import create_metadata
 from utils.prompt_utils import extend_prompt
-from utils.sidebar import render_sidebar_header
+from utils.sidebar import render_sidebar_header, render_sidebar_footer
+from utils.theme import load_custom_theme, render_page_header
 
 TASK = "t2v-A14B"
 TASK_KEY = get_task_session_key(TASK)
 CONFIG = MODEL_CONFIGS[TASK]
-# Render sidebar header
+
+# Load theme and render sidebar
+load_custom_theme()
 render_sidebar_header()
 
-
-st.title("Text to Video")
-st.markdown("Generate video from text prompts using the T2V-A14B model")
+# Page header
+render_page_header(
+    title="Text to Video",
+    description="Generate high-quality videos from text prompts using the T2V-A14B model (MoE 14B)",
+    icon="📝"
+)
 
 # Initialize session state for this page
 if f"{TASK_KEY}_extended_prompt" not in st.session_state:
     st.session_state[f"{TASK_KEY}_extended_prompt"] = None
 
+# Auto-select optimal settings
+available_gpus = get_available_gpus()
+num_gpus = min(2, available_gpus)
+resolution = CONFIG["default_size"]
+sample_steps = CONFIG["default_steps"]
+sample_shift = CONFIG["default_shift"]
+sample_guide_scale = CONFIG["default_guide_scale"]
+sample_solver = "unipc"
+frame_num = CONFIG["frame_num"]
+seed = -1
+
 # Sidebar configuration
 with st.sidebar:
-    st.header("Configuration")
-
-    # GPU configuration
-    available_gpus = get_available_gpus()
-    num_gpus = st.slider(
-        "Number of GPUs",
-        min_value=1,
-        max_value=available_gpus,
-        value=min(2, available_gpus),
-        help=f"Available GPUs: {available_gpus}",
-    )
-
-    # Resolution
-    resolution = st.selectbox(
-        "Resolution",
-        CONFIG["sizes"],
-        index=0,
-    )
-
-    st.divider()
-
-    # Generation options
-    st.subheader("Generation Settings")
-
-    sample_steps = st.slider(
-        "Sampling steps",
-        min_value=10,
-        max_value=50,
-        value=CONFIG["default_steps"],
-    )
-
-    sample_shift = st.slider(
-        "Sample shift",
-        min_value=1.0,
-        max_value=20.0,
-        value=CONFIG["default_shift"],
-        step=0.5,
-    )
-
-    sample_guide_scale = st.slider(
-        "Guidance scale",
-        min_value=1.0,
-        max_value=10.0,
-        value=CONFIG["default_guide_scale"],
-        step=0.5,
-    )
-
-    sample_solver = st.selectbox("Solver", ["unipc", "dpm++"], index=0)
-
-    frame_num = st.selectbox(
-        "Frame count",
-        [49, 65, 81, 97, 113],
-        index=2,
-        help="Number of frames (4n+1 format)",
-    )
-
-    seed = st.number_input("Seed", min_value=-1, max_value=2147483647, value=-1, help="-1 for random")
-
     st.divider()
 
     # Prompt extension option
@@ -288,3 +247,6 @@ st.markdown(
 - Use 2+ GPUs for faster generation with FSDP parallelism
 """
 )
+
+# Render sidebar footer with HPE badge
+render_sidebar_footer()

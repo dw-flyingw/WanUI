@@ -30,7 +30,8 @@ from utils.config import (
 from utils.generation import run_generation
 from utils.metadata import create_metadata
 from utils.prompt_utils import extend_prompt
-from utils.sidebar import render_sidebar_header
+from utils.sidebar import render_sidebar_header, render_sidebar_footer
+from utils.theme import load_custom_theme
 
 TASK = "ti2v-5B"
 TASK_KEY = get_task_session_key(TASK)
@@ -38,6 +39,7 @@ CONFIG = MODEL_CONFIGS[TASK]
 
 # Render sidebar header
 render_sidebar_header()
+load_custom_theme()
 
 st.title("⚡ Fast Text/Image to Video")
 st.markdown("Fast 720P video generation at 24fps - supports both text-only and image+text input")
@@ -60,63 +62,17 @@ mode = st.radio(
 st.session_state[f"{TASK_KEY}_mode"] = mode
 
 # Sidebar configuration
+# Auto-select optimal settings
+available_gpus = get_available_gpus()
+num_gpus = min(2, available_gpus)
+resolution = CONFIG["default_size"]
+sample_steps = CONFIG["default_steps"]
+sample_shift = CONFIG["default_shift"]
+sample_guide_scale = CONFIG["default_guide_scale"]
+sample_solver = "unipc"
+seed = -1
+
 with st.sidebar:
-    st.header("Configuration")
-
-    # GPU configuration
-    available_gpus = get_available_gpus()
-    num_gpus = st.slider(
-        "Number of GPUs",
-        min_value=1,
-        max_value=available_gpus,
-        value=min(2, available_gpus),
-        help=f"Available GPUs: {available_gpus}",
-    )
-
-    # Resolution
-    resolution = st.selectbox(
-        "Resolution",
-        CONFIG["sizes"],
-        index=0,
-    )
-
-    st.divider()
-
-    # Generation options
-    st.subheader("Sampling Settings")
-
-    sample_steps = st.slider(
-        "Sampling steps",
-        min_value=10,
-        max_value=50,
-        value=CONFIG["default_steps"],
-    )
-
-    sample_shift = st.slider(
-        "Sample shift",
-        min_value=1.0,
-        max_value=20.0,
-        value=CONFIG["default_shift"],
-        step=0.5,
-    )
-
-    sample_guide_scale = st.slider(
-        "Guidance scale",
-        min_value=1.0,
-        max_value=10.0,
-        value=CONFIG["default_guide_scale"],
-        step=0.5,
-    )
-
-    sample_solver = st.selectbox(
-        "Solver",
-        ["unipc", "dpm++"],
-        index=0,
-        help="Sampling solver algorithm. unipc is default, dpm++ may produce different results."
-    )
-
-    seed = st.number_input("Seed", min_value=-1, max_value=2147483647, value=-1, help="-1 for random")
-
     st.divider()
 
     # Prompt extension option
@@ -346,3 +302,6 @@ st.markdown(
 - Use 2+ GPUs for faster generation with FSDP parallelism
 """
 )
+
+# Render sidebar footer with HPE badge
+render_sidebar_footer()

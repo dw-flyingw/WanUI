@@ -13,10 +13,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from utils.history import OutputHistory
 from utils.config import MODEL_CONFIGS
-from utils.sidebar import render_sidebar_header
+from utils.sidebar import render_sidebar_header, render_sidebar_footer
+from utils.theme import load_custom_theme
 
 # Render sidebar header
 render_sidebar_header()
+load_custom_theme()
 
 st.title("🎬 Gallery")
 st.markdown("Browse and filter your video generations")
@@ -168,3 +170,6 @@ st.markdown(
     - All metadata is saved in each project's `metadata.json` file
     """
 )
+
+# Render sidebar footer with HPE badge
+render_sidebar_footer()

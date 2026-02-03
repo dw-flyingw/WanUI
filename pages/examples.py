@@ -12,10 +12,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from utils.config import FRONTEND_ROOT, MODEL_CONFIGS
 from utils.examples import ExampleLibrary
-from utils.sidebar import render_sidebar_header
+from utils.sidebar import render_sidebar_header, render_sidebar_footer
+from utils.theme import load_custom_theme
 
 # Render sidebar header
 render_sidebar_header()
+load_custom_theme()
 
 st.title("📁 Example Media Library")
 st.markdown("Browse example images, videos, and audio files to use with models")
@@ -216,3 +218,6 @@ st.markdown(
     - The example library is stored in the `examples/` directory
     """
 )
+
+# Render sidebar footer with HPE badge
+render_sidebar_footer()

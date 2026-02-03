@@ -31,13 +31,15 @@ from utils.config import (
 from utils.generation import run_generation, run_preprocessing
 from utils.metadata import create_metadata
 from utils.prompt_utils import extend_prompt
-from utils.sidebar import render_sidebar_header
+from utils.sidebar import render_sidebar_header, render_sidebar_footer
+from utils.theme import load_custom_theme
 
 TASK = "animate-14B"
 TASK_KEY = get_task_session_key(TASK)
 CONFIG = MODEL_CONFIGS[TASK]
 # Render sidebar header
 render_sidebar_header()
+load_custom_theme()
 
 
 st.title("Animate")
@@ -58,99 +60,30 @@ with st.sidebar:
         help="Animation: Mimics motion from video. Replacement: Replaces person in video.",
     )
 
-    # GPU configuration
+    # Auto-select optimal settings
     available_gpus = get_available_gpus()
-    num_gpus = st.slider(
-        "Number of GPUs",
-        min_value=1,
-        max_value=available_gpus,
-        value=min(2, available_gpus),
-        help=f"Available GPUs: {available_gpus}",
-    )
-
-    # Resolution
-    resolution = st.selectbox(
-        "Resolution",
-        CONFIG["sizes"],
-        index=0,
-    )
+    num_gpus = min(2, available_gpus)
+    resolution = CONFIG["default_size"]
     res_parts = resolution.split("*")
     resolution_tuple = (int(res_parts[0]), int(res_parts[1]))
+    fps = CONFIG["sample_fps"]
 
-    st.divider()
-
-    # Preprocessing options
-    st.subheader("Preprocessing")
-    fps = st.number_input("Target FPS", min_value=1, max_value=60, value=30)
-
+    # Preprocessing options - use defaults based on mode
     if mode == "animation":
-        use_retarget = st.checkbox(
-            "Use pose retargeting",
-            help="Recommended when character poses differ significantly",
-        )
-        use_flux = st.checkbox(
-            "Use FLUX image editing",
-            disabled=not use_retarget,
-            help="Recommended for non-standard poses",
-        )
-        iterations, k, w_len, h_len = 3, 7, 1, 1
-    else:
         use_retarget = False
         use_flux = False
-        st.markdown("**Mask parameters:**")
-        iterations = st.number_input(
-            "Dilation iterations",
-            min_value=1,
-            max_value=10,
-            value=3,
-            help="Number of times to expand the mask. Higher values create a larger buffer zone around the person for cleaner compositing.",
-        )
-        k = st.number_input(
-            "Kernel size",
-            min_value=3,
-            max_value=15,
-            value=7,
-            step=2,
-            help="Size of the dilation kernel in pixels (e.g., 7 means 7x7). Larger kernel expands the mask more per iteration.",
-        )
-        w_len = st.number_input(
-            "W subdivisions",
-            min_value=1,
-            max_value=5,
-            value=1,
-            help="Horizontal grid divisions for mask augmentation. Higher values create finer mask segmentation.",
-        )
-        h_len = st.number_input(
-            "H subdivisions",
-            min_value=1,
-            max_value=5,
-            value=1,
-            help="Vertical grid divisions for mask augmentation. Higher values create finer mask segmentation.",
-        )
-
-    st.divider()
+        iterations, k, w_len, h_len = 3, 7, 1, 1
+    else:  # replacement mode
+        use_retarget = False
+        use_flux = False
+        iterations, k, w_len, h_len = 3, 7, 1, 1
 
     # Generation options
-    st.subheader("Generation")
-    refert_num = st.selectbox(
-        "Reference frames",
-        [1, 5],
-        index=1,
-        help="Number of frames for temporal guidance",
-    )
-    sample_steps = st.slider(
-        "Sampling steps",
-        min_value=10,
-        max_value=50,
-        value=CONFIG["default_steps"],
-    )
-    sample_solver = st.selectbox("Solver", ["unipc", "dpm++"], index=0)
-    seed = st.number_input("Seed", min_value=-1, max_value=2147483647, value=-1, help="-1 for random")
-
-    if mode == "replacement":
-        use_relighting_lora = st.checkbox("Use relighting LoRA")
-    else:
-        use_relighting_lora = False
+    refert_num = 5
+    sample_steps = CONFIG["default_steps"]
+    sample_solver = "unipc"
+    seed = -1
+    use_relighting_lora = False
 
     st.divider()
 
@@ -456,3 +389,6 @@ st.markdown(
 - Click "Extend Prompt" to enhance your description and auto-generate anti-prompt
 """
 )
+
+# Render sidebar footer with HPE badge
+render_sidebar_footer()
