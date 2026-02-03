@@ -44,7 +44,7 @@ render_sidebar_header()
 render_page_header(
     title="Text to Video",
     description="Generate high-quality videos from text prompts using the T2V-A14B model (MoE 14B)",
-    icon="📝"
+    icon="📄"
 )
 
 # Initialize session state for this page
