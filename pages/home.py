@@ -64,10 +64,10 @@ st.markdown(
 )
 
 history = OutputHistory()
-recent_projects = history.get_recent(limit=6)
+recent_projects = history.get_recent(limit=8)
 
 if recent_projects:
-    history.display_gallery_grid(recent_projects, columns=3)
+    history.display_gallery_grid(recent_projects, columns=4)
 else:
     st.info(
         """
