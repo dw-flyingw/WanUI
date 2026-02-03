@@ -1,0 +1,642 @@
+/*
+ * WanUI Studio - Obsidian Precision Theme
+ * Modern dark aesthetic for professional video generation
+ */
+
+/* Import distinctive fonts */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+/* Import Phosphor Icons Light */
+@import url('https://unpkg.com/@phosphor-icons/web@2.0.3/src/light/style.css');
+
+/* ============================
+   ROOT VARIABLES - Obsidian Precision
+   ============================ */
+:root {
+    /* Core colors */
+    --obsidian-base: #0a0a0a;
+    --obsidian-surface: #121212;
+    --obsidian-elevated: #1a1a1a;
+    --obsidian-border: rgba(255, 255, 255, 0.08);
+    --obsidian-border-bright: rgba(0, 212, 255, 0.3);
+
+    /* Accent colors */
+    --accent-cyan: #00d4ff;
+    --accent-cyan-dim: #0099cc;
+    --accent-cyan-glow: rgba(0, 212, 255, 0.15);
+    --accent-success: #00ff88;
+    --accent-warning: #ffaa00;
+    --accent-error: #ff4466;
+
+    /* Text hierarchy */
+    --text-primary: #f0f0f0;
+    --text-secondary: #a0a0a0;
+    --text-tertiary: #606060;
+    --text-muted: #404040;
+
+    /* Shadows & glows */
+    --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.4);
+    --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.6);
+    --shadow-strong: 0 8px 32px rgba(0, 0, 0, 0.8);
+    --glow-cyan: 0 0 20px rgba(0, 212, 255, 0.2);
+
+    /* Transitions */
+    --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-gentle: 0.5s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+/* ============================
+   BASE STYLES
+   ============================ */
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--obsidian-base);
+    color: var(--text-primary);
+    line-height: 1.6;
+}
+
+/* Headers use distinctive Outfit font */
+h1, h2, h3, h4, h5, h6,
+.stTitle,
+[data-testid="stHeader"] {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+}
+
+h1 { font-size: 2.5rem; font-weight: 700; }
+h2 { font-size: 1.75rem; font-weight: 600; }
+h3 { font-size: 1.25rem; font-weight: 600; }
+
+/* ============================
+   MAIN APP CONTAINER
+   ============================ */
+.stApp {
+    background: var(--obsidian-base);
+}
+
+.main .block-container {
+    padding: 2rem 3rem;
+    max-width: 1400px;
+}
+
+/* ============================
+   SIDEBAR - Floating Panel
+   ============================ */
+[data-testid="stSidebar"] {
+    background: var(--obsidian-surface);
+    border-right: 1px solid var(--obsidian-border);
+    box-shadow: var(--shadow-medium);
+}
+
+[data-testid="stSidebar"] > div:first-child {
+    background: var(--obsidian-surface);
+    padding: 1.5rem 1rem;
+}
+
+/* Sidebar header styling */
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3 {
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--obsidian-border);
+}
+
+/* Sidebar navigation items */
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+/* ============================
+   NAVIGATION ICONS - Phosphor Light
+   ============================ */
+
+/* Base icon styles */
+[data-testid="stSidebarNav"] a::before {
+    font-family: 'Phosphor-Light';
+    font-size: 18px;
+    margin-right: 8px;
+    display: inline-block;
+    width: 20px;
+    text-align: center;
+    transition: var(--transition-fast);
+}
+
+/* Page-specific icons */
+[data-testid="stSidebarNav"] a[href*="home"]::before {
+    content: "\e9c1"; /* house-simple */
+}
+
+[data-testid="stSidebarNav"] a[href*="t2v_a14b"]::before {
+    content: "\e821"; /* article */
+}
+
+[data-testid="stSidebarNav"] a[href*="i2v_a14b"]::before {
+    content: "\e9b1"; /* image */
+}
+
+[data-testid="stSidebarNav"] a[href*="ti2v_5b"]::before {
+    content: "\ea4f"; /* lightning */
+}
+
+[data-testid="stSidebarNav"] a[href*="s2v_14b"]::before {
+    content: "\eb33"; /* waveform */
+}
+
+[data-testid="stSidebarNav"] a[href*="animate_14b"]::before {
+    content: "\ea7f"; /* magic-wand */
+}
+
+[data-testid="stSidebarNav"] a[href*="gallery"]::before {
+    content: "\e8e3"; /* film-slate */
+}
+
+[data-testid="stSidebarNav"] a[href*="examples"]::before {
+    content: "\e8fc"; /* folder-open */
+}
+
+/* ============================
+   CARDS & CONTAINERS
+   ============================ */
+[data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] {
+    background: var(--obsidian-elevated);
+    border: 1px solid var(--obsidian-border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    transition: all var(--transition-smooth);
+}
+
+[data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"]:hover {
+    border-color: var(--obsidian-border-bright);
+    box-shadow: var(--glow-cyan);
+    transform: translateY(-2px);
+}
+
+/* Expander styling */
+.streamlit-expanderHeader {
+    background: var(--obsidian-elevated);
+    border: 1px solid var(--obsidian-border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    color: var(--text-primary);
+    font-weight: 500;
+    transition: all var(--transition-fast);
+}
+
+.streamlit-expanderHeader:hover {
+    background: var(--obsidian-surface);
+    border-color: var(--accent-cyan);
+    color: var(--accent-cyan);
+}
+
+.streamlit-expanderContent {
+    background: var(--obsidian-surface);
+    border: 1px solid var(--obsidian-border);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    padding: 1rem;
+}
+
+/* ============================
+   BUTTONS - Precision Design
+   ============================ */
+.stButton > button {
+    background: linear-gradient(135deg, var(--obsidian-elevated) 0%, var(--obsidian-surface) 100%);
+    color: var(--text-primary);
+    border: 1px solid var(--obsidian-border);
+    border-radius: 8px;
+    padding: 0.6rem 1.5rem;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 0.95rem;
+    letter-spacing: 0.01em;
+    transition: all var(--transition-smooth);
+    box-shadow: var(--shadow-soft);
+}
+
+.stButton > button:hover {
+    background: var(--obsidian-elevated);
+    border-color: var(--accent-cyan);
+    color: var(--accent-cyan);
+    box-shadow: var(--glow-cyan);
+    transform: translateY(-1px);
+}
+
+/* Primary button - Cyan accent */
+.stButton > button[kind="primary"],
+.stButton > button[data-baseweb="button"][kind="primary"] {
+    background: linear-gradient(135deg, var(--accent-cyan-dim) 0%, var(--accent-cyan) 100%);
+    color: var(--obsidian-base);
+    border: 1px solid var(--accent-cyan);
+    font-weight: 600;
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+}
+
+.stButton > button[kind="primary"]:hover {
+    background: var(--accent-cyan);
+    box-shadow: 0 0 30px rgba(0, 212, 255, 0.5);
+    transform: translateY(-2px);
+}
+
+/* ============================
+   INPUTS - Refined Fields
+   ============================ */
+.stTextInput > div > div > input,
+.stTextArea textarea,
+.stNumberInput > div > div > input,
+.stSelectbox > div > div {
+    background: var(--obsidian-surface);
+    color: var(--text-primary);
+    border: 1px solid var(--obsidian-border);
+    border-radius: 8px;
+    padding: 0.6rem 1rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+    transition: all var(--transition-fast);
+}
+
+.stTextInput > div > div > input:focus,
+.stTextArea textarea:focus,
+.stNumberInput > div > div > input:focus {
+    border-color: var(--accent-cyan);
+    box-shadow: 0 0 0 1px var(--accent-cyan), var(--glow-cyan);
+    outline: none;
+}
+
+/* Text area specific styling */
+.stTextArea textarea {
+    min-height: 120px;
+    line-height: 1.6;
+}
+
+/* Select boxes */
+.stSelectbox [data-baseweb="select"] {
+    background: var(--obsidian-surface);
+}
+
+.stSelectbox [data-baseweb="select"] > div {
+    border: 1px solid var(--obsidian-border);
+    border-radius: 8px;
+    background: var(--obsidian-surface);
+}
+
+/* ============================
+   SLIDERS - Precision Controls
+   ============================ */
+.stSlider [data-baseweb="slider"] {
+    padding-top: 0.5rem;
+}
+
+.stSlider [data-baseweb="slider"] [role="slider"] {
+    background: var(--accent-cyan);
+    width: 16px;
+    height: 16px;
+    box-shadow: var(--glow-cyan);
+    transition: all var(--transition-fast);
+}
+
+.stSlider [data-baseweb="slider"] [role="slider"]:hover {
+    transform: scale(1.2);
+    box-shadow: 0 0 15px rgba(0, 212, 255, 0.5);
+}
+
+.stSlider [data-baseweb="slider"] [data-testid="stThumbValue"] {
+    background: var(--obsidian-elevated);
+    color: var(--accent-cyan);
+    border: 1px solid var(--accent-cyan);
+    border-radius: 6px;
+    padding: 0.2rem 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+/* Slider track */
+.stSlider [data-baseweb="slider"] > div > div {
+    background: var(--obsidian-border);
+}
+
+.stSlider [data-baseweb="slider"] > div > div > div {
+    background: var(--accent-cyan);
+}
+
+/* ============================
+   METRICS - Dashboard Style
+   ============================ */
+[data-testid="stMetric"] {
+    background: var(--obsidian-elevated);
+    border: 1px solid var(--obsidian-border);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    transition: all var(--transition-smooth);
+}
+
+[data-testid="stMetric"]:hover {
+    border-color: var(--accent-cyan-dim);
+    box-shadow: var(--shadow-soft);
+}
+
+[data-testid="stMetric"] [data-testid="stMetricLabel"] {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+[data-testid="stMetric"] [data-testid="stMetricValue"] {
+    color: var(--accent-cyan);
+    font-family: 'Outfit', sans-serif;
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+/* ============================
+   ALERTS & STATUS
+   ============================ */
+.stAlert {
+    border-radius: 8px;
+    border: 1px solid;
+    padding: 0.75rem 1rem;
+    margin: 0.5rem 0;
+}
+
+/* Info */
+.stAlert[data-baseweb="notification"][kind="info"] {
+    background: rgba(0, 212, 255, 0.1);
+    border-color: var(--accent-cyan-dim);
+    color: var(--accent-cyan);
+}
+
+/* Success */
+.stAlert[data-baseweb="notification"][kind="success"] {
+    background: rgba(0, 255, 136, 0.1);
+    border-color: var(--accent-success);
+    color: var(--accent-success);
+}
+
+/* Warning */
+.stAlert[data-baseweb="notification"][kind="warning"] {
+    background: rgba(255, 170, 0, 0.1);
+    border-color: var(--accent-warning);
+    color: var(--accent-warning);
+}
+
+/* Error */
+.stAlert[data-baseweb="notification"][kind="error"] {
+    background: rgba(255, 68, 102, 0.1);
+    border-color: var(--accent-error);
+    color: var(--accent-error);
+}
+
+/* Status container */
+.stStatus {
+    background: var(--obsidian-elevated);
+    border: 1px solid var(--obsidian-border);
+    border-radius: 10px;
+    padding: 1rem;
+}
+
+/* ============================
+   VIDEO PLAYER
+   ============================ */
+video {
+    border-radius: 12px;
+    border: 1px solid var(--obsidian-border);
+    box-shadow: var(--shadow-medium);
+    transition: all var(--transition-smooth);
+}
+
+video:hover {
+    box-shadow: var(--shadow-strong), var(--glow-cyan);
+}
+
+/* ============================
+   DIVIDERS
+   ============================ */
+hr {
+    border: none;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        var(--obsidian-border) 20%,
+        var(--obsidian-border) 80%,
+        transparent 100%
+    );
+    margin: 2rem 0;
+}
+
+/* ============================
+   CHECKBOXES & RADIO
+   ============================ */
+.stCheckbox {
+    padding: 0.5rem 0;
+}
+
+.stCheckbox label {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.stCheckbox input[type="checkbox"] {
+    accent-color: var(--accent-cyan);
+}
+
+/* ============================
+   TABS
+   ============================ */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 0.5rem;
+    border-bottom: 1px solid var(--obsidian-border);
+}
+
+.stTabs [data-baseweb="tab"] {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-family: 'Outfit', sans-serif;
+    font-weight: 500;
+    padding: 0.75rem 1.5rem;
+    transition: all var(--transition-fast);
+}
+
+.stTabs [data-baseweb="tab"]:hover {
+    color: var(--accent-cyan);
+}
+
+.stTabs [data-baseweb="tab"][aria-selected="true"] {
+    color: var(--accent-cyan);
+    border-bottom: 2px solid var(--accent-cyan);
+}
+
+/* ============================
+   SPINNER / LOADING
+   ============================ */
+.stSpinner > div {
+    border-color: var(--accent-cyan) transparent transparent transparent;
+}
+
+/* ============================
+   CAPTIONS & LABELS
+   ============================ */
+.stCaptionContainer,
+small,
+.caption {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+/* ============================
+   CODE BLOCKS
+   ============================ */
+code {
+    background: var(--obsidian-surface);
+    color: var(--accent-cyan);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.9em;
+}
+
+pre {
+    background: var(--obsidian-surface);
+    border: 1px solid var(--obsidian-border);
+    border-radius: 8px;
+    padding: 1rem;
+    overflow-x: auto;
+}
+
+/* ============================
+   CUSTOM CARD STYLES (from home.py)
+   ============================ */
+[data-testid="stMarkdownContainer"] div[style*="border"] {
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.03), rgba(0, 212, 255, 0.08)) !important;
+    border: 1px solid var(--obsidian-border-bright) !important;
+    border-radius: 12px !important;
+    padding: 1.5rem !important;
+    transition: all var(--transition-smooth);
+}
+
+[data-testid="stMarkdownContainer"] div[style*="border"]:hover {
+    border-color: var(--accent-cyan) !important;
+    box-shadow: var(--glow-cyan);
+    transform: translateY(-4px);
+}
+
+/* ============================
+   COLUMNS SPACING
+   ============================ */
+[data-testid="column"] {
+    padding: 0 0.5rem;
+}
+
+/* ============================
+   RESPONSIVE ADJUSTMENTS
+   ============================ */
+@media (max-width: 768px) {
+    .main .block-container {
+        padding: 1rem;
+    }
+
+    h1 { font-size: 2rem; }
+    h2 { font-size: 1.5rem; }
+
+    [data-testid="stMetric"] [data-testid="stMetricValue"] {
+        font-size: 1.5rem;
+    }
+
+    /* Tighter icon spacing on mobile */
+    [data-testid="stSidebarNav"] a::before {
+        margin-right: 6px;
+    }
+}
+
+/* ============================
+   SCROLLBAR - Minimal & Sleek
+   ============================ */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--obsidian-surface);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--obsidian-border-bright);
+    border-radius: 4px;
+    transition: background var(--transition-fast);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-cyan-dim);
+}
+
+/* ============================
+   ANIMATIONS - Micro-interactions
+   ============================ */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulseGlow {
+    0%, 100% {
+        box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+    }
+}
+
+/* Apply fade-in to main content blocks */
+[data-testid="stVerticalBlock"] > div {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+/* Staggered animation delay for cards */
+[data-testid="column"]:nth-child(1) { animation-delay: 0s; }
+[data-testid="column"]:nth-child(2) { animation-delay: 0.1s; }
+[data-testid="column"]:nth-child(3) { animation-delay: 0.2s; }
+
+/* ============================
+   FOOTER STYLING
+   ============================ */
+footer {
+    color: var(--text-tertiary);
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 2rem 0;
+    border-top: 1px solid var(--obsidian-border);
+    margin-top: 3rem;
+}
+
+/* ============================
+   SELECTION
+   ============================ */
+::selection {
+    background: var(--accent-cyan-glow);
+    color: var(--accent-cyan);
+}
+
+::-moz-selection {
+    background: var(--accent-cyan-glow);
+    color: var(--accent-cyan);
+}
