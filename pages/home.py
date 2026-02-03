@@ -12,8 +12,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from utils.common import get_available_gpus
 from utils.history import OutputHistory
-from utils.model_cards import MODEL_CAPABILITIES
-from utils.sidebar import render_sidebar_header
+from utils.sidebar import render_sidebar_header, render_sidebar_footer
+from utils.theme import load_custom_theme
 
 # Page configuration
 st.set_page_config(
@@ -22,12 +22,24 @@ st.set_page_config(
     layout="wide",
 )
 
-# Render sidebar header
+# Load theme and render sidebar
+load_custom_theme()
 render_sidebar_header()
 
-# Welcome section
-st.markdown("## Welcome to WanUI Studio")
-st.markdown("Generate professional videos with 5 different Wan2.2 models. Choose a model below or from the sidebar to get started.")
+# Welcome section with refined styling
+st.markdown(
+    """
+    <div style="margin-bottom: 2rem;">
+        <h1 style="font-size: 3rem; font-weight: 700; margin-bottom: 0.5rem; background: linear-gradient(135deg, #f0f0f0 0%, #00d4ff 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+            WanUI Studio
+        </h1>
+        <p style="font-size: 1.1rem; color: #a0a0a0; margin: 0;">
+            Professional video generation powered by Wan2.2 AI models
+        </p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 # GPU Status Widget
 available_gpus = get_available_gpus()
@@ -44,73 +56,12 @@ with col3:
 
 st.divider()
 
-# Model Cards Grid
-st.header("Available Models")
-st.markdown("Choose from 5 specialized models for different video generation tasks")
-
-# Get all model capabilities in desired order
-model_order = ["t2v-A14B", "i2v-A14B", "ti2v-5B", "s2v-14B", "animate-14B"]
-capabilities = [MODEL_CAPABILITIES[task] for task in model_order]
-
-# Display cards in a 3-column grid
-cols = st.columns(3)
-
-for idx, capability in enumerate(capabilities):
-    col = cols[idx % 3]
-
-    with col:
-        with st.container():
-            # Card styling
-            st.markdown(
-                f"""
-                <div style="
-                    border: 1px solid #444;
-                    border-radius: 8px;
-                    padding: 1.5rem;
-                    margin-bottom: 1rem;
-                    background: linear-gradient(135deg, rgba(76, 175, 80, 0.05), rgba(33, 150, 243, 0.05));
-                ">
-                    <h3 style="margin-top: 0;">{capability.icon} {capability.name}</h3>
-                    <p style="color: #ccc;">{capability.description}</p>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-            # Specs in columns
-            spec_col1, spec_col2, spec_col3 = st.columns(3)
-            with spec_col1:
-                st.caption("**Resolution**")
-                st.caption(capability.resolution)
-            with spec_col2:
-                st.caption("**FPS**")
-                st.caption(f"{capability.fps}")
-            with spec_col3:
-                st.caption("**Quality**")
-                st.caption(capability.quality_rating)
-
-            # Key features
-            with st.expander("✨ Key Features"):
-                for feature in capability.key_features:
-                    st.markdown(f"• {feature}")
-
-            # Try now button - uses Streamlit page navigation
-            page_path = f"pages/{capability.page_file}"
-            if st.button(
-                "Try Now →",
-                key=f"try_{capability.task}",
-                use_container_width=True,
-                type="primary"
-            ):
-                # Note: Streamlit doesn't support direct page navigation from buttons
-                # This will be handled by sidebar navigation instead
-                st.info(f"Navigate to **{capability.name}** from the sidebar →")
-
-st.divider()
-
 # Recent Outputs Section
-st.header("Recent Outputs")
-st.markdown("Latest video generations from all models")
+st.markdown("### Recent Outputs")
+st.markdown(
+    '<p style="color: #a0a0a0; margin-bottom: 1.5rem;">Latest video generations from all models</p>',
+    unsafe_allow_html=True,
+)
 
 history = OutputHistory()
 recent_projects = history.get_recent(limit=6)
@@ -134,7 +85,11 @@ else:
 st.divider()
 
 # Quick Start Guide
-st.header("Quick Start Guide")
+st.markdown("### Quick Start Guide")
+st.markdown(
+    '<p style="color: #a0a0a0; margin-bottom: 1.5rem;">Learn how to use each model effectively</p>',
+    unsafe_allow_html=True,
+)
 
 with st.expander("📝 Text to Video (T2V-A14B)", expanded=False):
     st.markdown(
@@ -239,10 +194,17 @@ st.divider()
 # Footer
 st.markdown(
     """
-    <div style="text-align: center; padding: 2rem 0; color: #666;">
-        <p>Powered by Wan2.2 Models | Built with Streamlit</p>
-        <p>For best results, use portrait images for S2V, clear motion for Animate, and descriptive prompts for T2V/I2V</p>
+    <div style="text-align: center; padding: 3rem 0 2rem 0; color: #606060; border-top: 1px solid rgba(255, 255, 255, 0.08); margin-top: 3rem;">
+        <p style="font-size: 0.9rem; margin-bottom: 0.5rem;">
+            <span style="color: #00d4ff; font-weight: 600;">Powered by Wan2.2 Models</span> | Built with Streamlit
+        </p>
+        <p style="font-size: 0.85rem; color: #606060;">
+            For best results, use portrait images for S2V, clear motion for Animate, and descriptive prompts for T2V/I2V
+        </p>
     </div>
     """,
     unsafe_allow_html=True,
 )
+
+# Render sidebar footer with HPE badge
+render_sidebar_footer()
