@@ -1,5 +1,6 @@
 [server]
 port = 8560
+baseUrlPath = "/wanui"
 
 [theme]
 base = "dark"

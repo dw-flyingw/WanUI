@@ -58,9 +58,10 @@ dependencies = [
     "huggingface-hub[cli]",
     "moviepy>=2.2.1",
     "sam2>=1.1.0",
-    "flash-attn",
 ]
 
+# flash-attn requires CUDA and special build - install separately:
+#   pip install flash-attn --no-build-isolation
 # SAM-2 requires git install:
 #   pip install git+https://github.com/facebookresearch/sam2.git@0e78a118995e66bb27d78518c4bd9a3e95b4e266
 
