@@ -4,6 +4,8 @@ GPU utilities for detecting and managing NVIDIA GPUs.
 
 import subprocess
 
+import streamlit as st
+
 
 def get_available_gpus() -> int:
     """
@@ -63,3 +65,66 @@ def get_gpu_info() -> list[dict]:
         return gpus
     except Exception:
         return []
+
+
+def render_gpu_selector(default_value: int = 1) -> int:
+    """
+    Render GPU selection widget with visual memory usage indicators.
+
+    Args:
+        default_value: Default number of GPUs to select
+
+    Returns:
+        int: Selected number of GPUs
+    """
+    available_gpus = get_available_gpus()
+    gpu_info = get_gpu_info()
+
+    st.subheader("GPU Configuration")
+
+    # Display GPU usage visualization
+    if gpu_info:
+        for gpu in gpu_info:
+            # GPU header
+            st.markdown(
+                f"<div style='margin-bottom: 0.5rem;'>"
+                f"<strong style='color: var(--text-primary);'>GPU {gpu['index']}</strong> "
+                f"<span style='color: var(--text-secondary); font-size: 0.85rem;'>{gpu['name']}</span>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+
+            # Memory usage bar and stats
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                usage_pct = gpu["memory_used_mb"] / gpu["memory_total_mb"]
+                # Color based on usage level
+                if usage_pct > 0.9:
+                    bar_color = "🔴"
+                elif usage_pct > 0.7:
+                    bar_color = "🟡"
+                else:
+                    bar_color = "🟢"
+                st.progress(
+                    usage_pct,
+                    text=f"{bar_color} {usage_pct*100:.1f}% used",
+                )
+            with col2:
+                free_gb = gpu["memory_free_mb"] / 1024
+                st.caption(f"**{free_gb:.1f} GB** free")
+
+            st.markdown("<div style='margin-bottom: 1rem;'></div>", unsafe_allow_html=True)
+
+    else:
+        st.info(f"{available_gpus} GPU(s) detected (detailed info unavailable)")
+
+    # GPU selection slider
+    num_gpus = st.slider(
+        "Number of GPUs to use",
+        min_value=1,
+        max_value=available_gpus,
+        value=min(default_value, available_gpus),
+        help=f"Select how many GPUs to use for generation",
+    )
+
+    return num_gpus

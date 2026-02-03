@@ -19,7 +19,7 @@ from utils.common import (
     sanitize_project_name,
     save_uploaded_file,
 )
-from utils.gpu import get_available_gpus
+from utils.gpu import render_gpu_selector
 from utils.config import (
     DEFAULT_PROMPTS,
     MODEL_CONFIGS,
@@ -73,15 +73,8 @@ with st.sidebar:
     use_flux = False
     use_relighting_lora = False
 
-    # GPU selection
-    available_gpus = get_available_gpus()
-    num_gpus = st.slider(
-        "Number of GPUs",
-        min_value=1,
-        max_value=available_gpus,
-        value=1,
-        help=f"Available GPUs: {available_gpus}",
-    )
+    # GPU selection with usage visualization
+    num_gpus = render_gpu_selector(default_value=1)
 
     st.divider()
 
