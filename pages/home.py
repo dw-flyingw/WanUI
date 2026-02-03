@@ -75,7 +75,41 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-with st.expander("📝 Text to Video (T2V-A14B)", expanded=False):
+# Custom collapsible sections with Phosphor Icons
+st.markdown(
+    """
+    <style>
+    .guide-section {
+        margin-bottom: 0.5rem;
+    }
+    .guide-header {
+        background: var(--obsidian-elevated);
+        border: 1px solid var(--obsidian-border);
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        transition: all var(--transition-fast);
+    }
+    .guide-header:hover {
+        background: var(--obsidian-surface);
+        border-color: var(--accent-cyan);
+    }
+    .guide-icon {
+        font-family: 'Phosphor-Light';
+        font-size: 18px;
+        margin-right: 8px;
+        color: var(--text-secondary);
+    }
+    .guide-title {
+        color: var(--text-primary);
+        font-weight: 500;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+with st.expander("📄  Text to Video (T2V-A14B)", expanded=False):
     st.markdown(
         """
         **What it does:** Generates videos from text prompts alone
@@ -84,17 +118,17 @@ with st.expander("📝 Text to Video (T2V-A14B)", expanded=False):
         1. Navigate to **Text to Video** page
         2. Enter a descriptive prompt (e.g., "A serene mountain landscape at sunset")
         3. (Optional) Click "Extend Prompt" to enhance with cinematic details
-        4. Adjust resolution and sampling settings
+        4. Adjust sampling settings if needed
         5. Click "Generate Video"
 
         **Tips:**
         - Be specific about subjects, actions, lighting, and camera movements
         - Higher sampling steps (40-50) = better quality but slower
-        - Use 2+ GPUs for faster generation
+        - Use multiple GPUs for faster generation
         """
     )
 
-with st.expander("🖼️ Image to Video (I2V-A14B)", expanded=False):
+with st.expander("🖼️  Image to Video (I2V-A14B)", expanded=False):
     st.markdown(
         """
         **What it does:** Animates static images with natural motion
@@ -103,7 +137,7 @@ with st.expander("🖼️ Image to Video (I2V-A14B)", expanded=False):
         1. Navigate to **Image to Video** page
         2. Upload a reference image
         3. Enter a prompt describing the desired motion
-        4. Adjust settings and generate
+        4. Generate
 
         **Tips:**
         - Works best with clear, well-composed images
@@ -112,7 +146,7 @@ with st.expander("🖼️ Image to Video (I2V-A14B)", expanded=False):
         """
     )
 
-with st.expander("⚡ Fast T2V/I2V (TI2V-5B)", expanded=False):
+with st.expander("⚡  Fast T2V/I2V (TI2V-5B)", expanded=False):
     st.markdown(
         """
         **What it does:** Fast video generation - supports both text-only and image-guided
@@ -130,7 +164,7 @@ with st.expander("⚡ Fast T2V/I2V (TI2V-5B)", expanded=False):
         """
     )
 
-with st.expander("🎤 Speech to Video (S2V-14B)", expanded=False):
+with st.expander("〰️  Speech to Video (S2V-14B)", expanded=False):
     st.markdown(
         """
         **What it does:** Creates talking head videos with lip-sync
@@ -151,7 +185,7 @@ with st.expander("🎤 Speech to Video (S2V-14B)", expanded=False):
         """
     )
 
-with st.expander("🎭 Character Animation (Animate-14B)", expanded=False):
+with st.expander("✨  Character Animation (Animate-14B)", expanded=False):
     st.markdown(
         """
         **What it does:** Animates or replaces characters using motion from source videos
@@ -160,16 +194,12 @@ with st.expander("🎭 Character Animation (Animate-14B)", expanded=False):
         1. Navigate to **Animate** page
         2. Choose mode: "Animation" or "Replacement"
         3. Upload source video (with motion) and reference image
-        4. Choose preprocessing options:
-           - Animation mode: Use pose retargeting for different body types
-           - Replacement mode: Adjust mask parameters for clean compositing
-        5. Generate
+        4. Generate
 
         **Tips:**
         - Use 5-10 second source videos with clear motion
         - Animation mode: mimics motion from video
         - Replacement mode: replaces person in video with reference character
-        - Enable pose retargeting when poses differ significantly
         """
     )
 
