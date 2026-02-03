@@ -41,7 +41,7 @@ render_sidebar_header()
 load_custom_theme()
 
 
-st.title("Speech to Video")
+st.title("〰️ Speech to Video")
 st.markdown("Generate talking head video from audio and reference image using the S2V-14B model")
 
 # Initialize session state for this page

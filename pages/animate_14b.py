@@ -42,7 +42,7 @@ render_sidebar_header()
 load_custom_theme()
 
 
-st.title("Animate")
+st.title("✨ Animate")
 st.markdown("Animate a character from reference image using motion from source video")
 
 # Initialize session state for this page

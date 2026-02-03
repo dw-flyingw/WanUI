@@ -41,7 +41,7 @@ render_sidebar_header()
 load_custom_theme()
 
 
-st.title("Image to Video")
+st.title("🖼️ Image to Video")
 st.markdown("Generate video from an image with text guidance using the I2V-A14B model")
 
 # Initialize session state for this page
