@@ -121,45 +121,50 @@ h3 { font-size: 1.25rem; font-weight: 600; }
 /* Base icon styles */
 [data-testid="stSidebarNav"] a::before {
     font-family: 'Phosphor-Light';
-    font-size: 18px;
-    margin-right: 8px;
+    font-size: 20px;
+    margin-right: 10px;
     display: inline-block;
-    width: 20px;
+    width: 24px;
     text-align: center;
     transition: var(--transition-fast);
+    opacity: 0.9;
+}
+
+[data-testid="stSidebarNav"] a:hover::before {
+    opacity: 1;
 }
 
 /* Page-specific icons */
 [data-testid="stSidebarNav"] a[href*="home"]::before {
-    content: "\e9c1"; /* house-simple */
+    content: "\eb9e"; /* house-simple */
 }
 
 [data-testid="stSidebarNav"] a[href*="t2v_a14b"]::before {
-    content: "\e821"; /* article */
+    content: "\e984"; /* article */
 }
 
 [data-testid="stSidebarNav"] a[href*="i2v_a14b"]::before {
-    content: "\e9b1"; /* image */
+    content: "\eba2"; /* image */
 }
 
 [data-testid="stSidebarNav"] a[href*="ti2v_5b"]::before {
-    content: "\ea4f"; /* lightning */
+    content: "\ebbe"; /* lightning */
 }
 
 [data-testid="stSidebarNav"] a[href*="s2v_14b"]::before {
-    content: "\eb33"; /* waveform */
+    content: "\edc4"; /* waveform */
 }
 
 [data-testid="stSidebarNav"] a[href*="animate_14b"]::before {
-    content: "\ea7f"; /* magic-wand */
+    content: "\ebda"; /* magic-wand */
 }
 
 [data-testid="stSidebarNav"] a[href*="gallery"]::before {
-    content: "\e8e3"; /* film-slate */
+    content: "\eb07"; /* film-slate */
 }
 
 [data-testid="stSidebarNav"] a[href*="examples"]::before {
-    content: "\e8fc"; /* folder-open */
+    content: "\eb29"; /* folder-open */
 }
 
 /* ============================
@@ -557,7 +562,9 @@ pre {
 
     /* Tighter icon spacing on mobile */
     [data-testid="stSidebarNav"] a::before {
-        margin-right: 6px;
+        margin-right: 8px;
+        font-size: 18px;
+        width: 20px;
     }
 }
 
