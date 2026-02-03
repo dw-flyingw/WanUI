@@ -15,11 +15,11 @@ from utils.common import (
     extract_audio_from_video,
     format_duration,
     format_file_size,
-    get_available_gpus,
     get_video_info,
     sanitize_project_name,
     save_uploaded_file,
 )
+from utils.gpu import get_available_gpus
 from utils.config import (
     DEFAULT_PROMPTS,
     MODEL_CONFIGS,
