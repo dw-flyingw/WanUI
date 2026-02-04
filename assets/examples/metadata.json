@@ -92,8 +92,8 @@
       "thumbnail": "thumbnails/images/portraits/test_portrait_01_thumb.jpg",
       "category": "portraits",
       "tags": ["person", "portrait", "test"],
-      "description": "Test portrait image for S2V and Animate workflows",
-      "compatible_tasks": ["i2v-A14B", "ti2v-5B", "s2v-14B", "animate-14B"],
+      "description": "Test portrait image for S2V workflows",
+      "compatible_tasks": ["i2v-A14B", "ti2v-5B", "s2v-14B"],
       "media_type": "image",
       "metadata": {
         "note": "Existing test media"
@@ -119,8 +119,8 @@
       "thumbnail": "thumbnails/videos/test_videos/test_video_01_thumb.jpg",
       "category": "test_videos",
       "tags": ["test", "motion"],
-      "description": "Test video clip for Animate workflows",
-      "compatible_tasks": ["animate-14B"],
+      "description": "Test video clip",
+      "compatible_tasks": [],
       "media_type": "video",
       "metadata": {
         "note": "Existing test media"

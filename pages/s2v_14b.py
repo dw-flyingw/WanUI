@@ -26,6 +26,7 @@ from utils.config import (
     PROMPT_EXTEND_METHOD,
     PROMPT_EXTEND_MODEL,
     get_task_session_key,
+    render_example_prompts,
 )
 from utils.generation import run_generation
 from utils.metadata import create_metadata
@@ -47,6 +48,10 @@ st.markdown("Generate talking head video from audio and reference image using th
 # Initialize session state for this page
 if f"{TASK_KEY}_extended_prompt" not in st.session_state:
     st.session_state[f"{TASK_KEY}_extended_prompt"] = None
+if f"{TASK_KEY}_generating" not in st.session_state:
+    st.session_state[f"{TASK_KEY}_generating"] = False
+if f"{TASK_KEY}_cancel_requested" not in st.session_state:
+    st.session_state[f"{TASK_KEY}_cancel_requested"] = False
 
 # Auto-select optimal defaults
 resolution = CONFIG["default_size"]
@@ -59,7 +64,11 @@ with st.sidebar:
     st.header("Settings")
 
     # GPU selection with usage visualization
-    num_gpus = render_gpu_selector(default_value=1)
+    num_gpus, gpu_ids = render_gpu_selector(
+        default_value=1,
+        allow_gpu_selection=True,
+        num_heads=CONFIG.get("num_heads"),
+    )
 
     st.divider()
 
@@ -184,12 +193,26 @@ if project_dir.exists():
 # Prompt section
 st.subheader("Prompts")
 
+# Check if an example was clicked
+if f"{TASK_KEY}_example_clicked" in st.session_state:
+    example_text = st.session_state[f"{TASK_KEY}_example_clicked"]
+    del st.session_state[f"{TASK_KEY}_example_clicked"]
+    default_prompt = example_text
+else:
+    default_prompt = DEFAULT_PROMPTS[TASK]
+
 prompt = st.text_area(
     "Your Prompt",
-    value=DEFAULT_PROMPTS[TASK],
+    value=default_prompt,
     height=100,
     help="Describe the speaking style and expressions",
+    key=f"{TASK_KEY}_prompt_input",
 )
+
+# Example prompts
+render_example_prompts(TASK)
+
+st.divider()
 
 # Prompt extension button
 col1, col2 = st.columns([1, 4])
@@ -238,51 +261,66 @@ elif audio_mode == "Text-to-Speech (TTS)":
         can_generate = False
         error_messages.append("Please enter text to synthesize")
 
-if st.button("Generate Video", type="primary", use_container_width=True):
-    if not can_generate:
-        for msg in error_messages:
-            st.error(msg)
-    else:
-        generation_start = datetime.now()
+if st.session_state.get(f"{TASK_KEY}_generating", False):
+    # Show cancel button while generating
+    if st.button("⏹️ Cancel Generation", type="secondary", use_container_width=True):
+        st.session_state[f"{TASK_KEY}_cancel_requested"] = True
+        st.rerun()
+else:
+    # Show generate button
+    if st.button("Generate Video", type="primary", use_container_width=True):
+        if not can_generate:
+            for msg in error_messages:
+                st.error(msg)
+        else:
+            # Set generating flag
+            st.session_state[f"{TASK_KEY}_generating"] = True
+            st.session_state[f"{TASK_KEY}_cancel_requested"] = False
 
-        # Create project directory
-        project_dir.mkdir(parents=True, exist_ok=True)
-        input_dir = project_dir / "input"
-        input_dir.mkdir(parents=True, exist_ok=True)
+            generation_start = datetime.now()
 
-        # Save uploaded files
-        image_path = save_uploaded_file(uploaded_image, input_dir / "image.jpg")
+            # Create project directory
+            project_dir.mkdir(parents=True, exist_ok=True)
+            input_dir = project_dir / "input"
+            input_dir.mkdir(parents=True, exist_ok=True)
 
-        audio_path = None
-        tts_audio_path = None
-        if uploaded_audio:
-            audio_ext = Path(uploaded_audio.name).suffix
-            audio_path = save_uploaded_file(uploaded_audio, input_dir / f"audio{audio_ext}")
+            # Save uploaded files
+            image_path = save_uploaded_file(uploaded_image, input_dir / "image.jpg")
 
-        if enable_tts and tts_prompt_audio:
-            tts_ext = Path(tts_prompt_audio.name).suffix
-            tts_audio_path = save_uploaded_file(tts_prompt_audio, input_dir / f"tts_reference{tts_ext}")
+            audio_path = None
+            tts_audio_path = None
+            if uploaded_audio:
+                audio_ext = Path(uploaded_audio.name).suffix
+                audio_path = save_uploaded_file(uploaded_audio, input_dir / f"audio{audio_ext}")
 
-        pose_video_path = None
-        if pose_video:
-            pose_ext = Path(pose_video.name).suffix
-            pose_video_path = save_uploaded_file(pose_video, input_dir / f"pose{pose_ext}")
+            if enable_tts and tts_prompt_audio:
+                tts_ext = Path(tts_prompt_audio.name).suffix
+                tts_audio_path = save_uploaded_file(tts_prompt_audio, input_dir / f"tts_reference{tts_ext}")
 
-        # Generate output filename
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        final_output = project_dir / f"output_{timestamp}.mp4"
+            pose_video_path = None
+            if pose_video:
+                pose_ext = Path(pose_video.name).suffix
+                pose_video_path = save_uploaded_file(pose_video, input_dir / f"pose{pose_ext}")
 
-        # Use extended prompt if available
-        generation_prompt = st.session_state.get(f"{TASK_KEY}_extended_prompt") or prompt
+            # Generate output filename
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            final_output = project_dir / f"output_{timestamp}.mp4"
 
-        with st.status("Generating video...", expanded=True) as status:
-            st.write(f"Running on {num_gpus} GPU(s)...")
-            st.write(f"Resolution: {resolution}, Frames per clip: {infer_frames}")
-            if enable_tts:
-                st.write("Using TTS for audio generation...")
-            st.write(f"Prompt: {generation_prompt[:100]}...")
+            # Use extended prompt if available
+            generation_prompt = st.session_state.get(f"{TASK_KEY}_extended_prompt") or prompt
 
-            success, output, generation_time = run_generation(
+            # Cancellation check function
+            def check_cancellation():
+                return st.session_state.get(f"{TASK_KEY}_cancel_requested", False)
+
+            with st.status("Generating video...", expanded=True) as status:
+                st.write(f"Running on {num_gpus} GPU(s)...")
+                st.write(f"Resolution: {resolution}, Frames per clip: {infer_frames}")
+                if enable_tts:
+                    st.write("Using TTS for audio generation...")
+                st.write(f"Prompt: {generation_prompt[:100]}...")
+
+                success, output, generation_time = run_generation(
                 task=TASK,
                 output_file=final_output,
                 prompt=generation_prompt,
@@ -295,6 +333,7 @@ if st.button("Generate Video", type="primary", use_container_width=True):
                 seed=seed,
                 image_path=image_path,
                 audio_path=audio_path,
+                gpu_ids=gpu_ids,
                 use_prompt_extend=False,  # Already extended in UI
                 enable_tts=enable_tts,
                 tts_prompt_audio=tts_audio_path,
@@ -304,14 +343,22 @@ if st.button("Generate Video", type="primary", use_container_width=True):
                 infer_frames=infer_frames,
                 start_from_ref=start_from_ref,
                 num_clip=num_clip if num_clip > 1 else None,
+                cancellation_check=check_cancellation,
             )
 
-            if not success:
-                status.update(label="Generation failed", state="error")
-                st.error(output)
-                st.stop()
+                # Reset generating flag
+                st.session_state[f"{TASK_KEY}_generating"] = False
 
-            status.update(label=f"Generation complete ({format_duration(generation_time)})", state="complete")
+                if not success:
+                    if "cancelled by user" in output.lower():
+                        status.update(label="Generation cancelled", state="error")
+                        st.warning("Generation was cancelled.")
+                    else:
+                        status.update(label="Generation failed", state="error")
+                        st.error(output)
+                    st.stop()
+
+                status.update(label=f"Generation complete ({format_duration(generation_time)})", state="complete")
 
         generation_end = datetime.now()
 

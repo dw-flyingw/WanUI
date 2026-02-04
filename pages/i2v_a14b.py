@@ -28,6 +28,7 @@ from utils.config import (
     PROMPT_EXTEND_METHOD,
     PROMPT_EXTEND_MODEL,
     get_task_session_key,
+    render_example_prompts,
 )
 from utils.generation import run_generation
 from utils.metadata import create_metadata
@@ -52,6 +53,10 @@ st.markdown("Generate video from an image with text guidance using the I2V-A14B 
 # Initialize session state for this page
 if f"{TASK_KEY}_extended_prompt" not in st.session_state:
     st.session_state[f"{TASK_KEY}_extended_prompt"] = None
+if f"{TASK_KEY}_generating" not in st.session_state:
+    st.session_state[f"{TASK_KEY}_generating"] = False
+if f"{TASK_KEY}_cancel_requested" not in st.session_state:
+    st.session_state[f"{TASK_KEY}_cancel_requested"] = False
 # Initialize example selector session state
 if f"{TASK_KEY}_example_loaded" not in st.session_state:
     st.session_state[f"{TASK_KEY}_example_loaded"] = False
@@ -192,12 +197,26 @@ if project_dir.exists():
 # Prompt section
 st.subheader("Prompts")
 
+# Check if an example was clicked
+if f"{TASK_KEY}_example_clicked" in st.session_state:
+    example_text = st.session_state[f"{TASK_KEY}_example_clicked"]
+    del st.session_state[f"{TASK_KEY}_example_clicked"]
+    default_prompt = example_text
+else:
+    default_prompt = DEFAULT_PROMPTS[TASK]
+
 prompt = st.text_area(
     "Your Prompt (optional)",
-    value=DEFAULT_PROMPTS[TASK],
+    value=default_prompt,
     height=120,
     help="Describe how you want the image to animate. Leave empty to let the model decide.",
+    key=f"{TASK_KEY}_prompt_input",
 )
+
+# Example prompts
+render_example_prompts(TASK)
+
+st.divider()
 
 # Prompt extension button
 col1, col2 = st.columns([1, 4])
@@ -228,18 +247,29 @@ if st.session_state.get(f"{TASK_KEY}_extended_prompt"):
 # Generate button
 st.divider()
 
-if st.button("Generate Video", type="primary", use_container_width=True):
-    # Determine image source
-    example_loaded = st.session_state.get(f"{TASK_KEY}_example_loaded", False)
-    loaded_example_path = st.session_state.get(f"{TASK_KEY}_loaded_example_path")
+if st.session_state.get(f"{TASK_KEY}_generating", False):
+    # Show cancel button while generating
+    if st.button("⏹️ Cancel Generation", type="secondary", use_container_width=True):
+        st.session_state[f"{TASK_KEY}_cancel_requested"] = True
+        st.rerun()
+else:
+    # Show generate button
+    if st.button("Generate Video", type="primary", use_container_width=True):
+        # Determine image source
+        example_loaded = st.session_state.get(f"{TASK_KEY}_example_loaded", False)
+        loaded_example_path = st.session_state.get(f"{TASK_KEY}_loaded_example_path")
 
-    # Validate input
-    if not example_loaded and not uploaded_image:
-        st.error("Please upload a source image or select an example")
-    elif example_loaded and not loaded_example_path:
-        st.error("Example path not found. Please select an example again.")
-    else:
-        generation_start = datetime.now()
+        # Validate input
+        if not example_loaded and not uploaded_image:
+            st.error("Please upload a source image or select an example")
+        elif example_loaded and not loaded_example_path:
+            st.error("Example path not found. Please select an example again.")
+        else:
+            # Set generating flag
+            st.session_state[f"{TASK_KEY}_generating"] = True
+            st.session_state[f"{TASK_KEY}_cancel_requested"] = False
+
+            generation_start = datetime.now()
 
         # Create project directory
         project_dir.mkdir(parents=True, exist_ok=True)
@@ -282,6 +312,10 @@ if st.button("Generate Video", type="primary", use_container_width=True):
         # Use extended prompt if available
         generation_prompt = st.session_state.get(f"{TASK_KEY}_extended_prompt") or prompt
 
+        # Cancellation check function
+        def check_cancellation():
+            return st.session_state.get(f"{TASK_KEY}_cancel_requested", False)
+
         with st.status("Generating video...", expanded=True) as status:
             st.write(f"Running on {num_gpus} GPU(s)...")
             st.write(f"Resolution: {resolution}, Frames: {frame_num}")
@@ -305,11 +339,19 @@ if st.button("Generate Video", type="primary", use_container_width=True):
                 image_path=image_path,
                 frame_num=frame_num,
                 use_prompt_extend=False,  # Already extended in UI
+                cancellation_check=check_cancellation,
             )
 
+            # Reset generating flag
+            st.session_state[f"{TASK_KEY}_generating"] = False
+
             if not success:
-                status.update(label="Generation failed", state="error")
-                st.error(output)
+                if "cancelled by user" in output.lower():
+                    status.update(label="Generation cancelled", state="error")
+                    st.warning("Generation was cancelled.")
+                else:
+                    status.update(label="Generation failed", state="error")
+                    st.error(output)
                 st.stop()
 
             status.update(label=f"Generation complete ({format_duration(generation_time)})", state="complete")

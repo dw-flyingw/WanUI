@@ -51,6 +51,7 @@ MODEL_CONFIGS = {
         "default_guide_scale": 3.5,
         "frame_num": 81,
         "sample_fps": 16,
+        "num_heads": 40,  # For Ulysses parallelism - GPU count must divide this evenly
         "requires_image": False,
         "requires_video": False,
         "requires_audio": False,
@@ -68,6 +69,7 @@ MODEL_CONFIGS = {
         "default_guide_scale": 3.5,
         "frame_num": 81,
         "sample_fps": 16,
+        "num_heads": 40,  # For Ulysses parallelism - GPU count must divide this evenly
         "requires_image": True,
         "requires_video": False,
         "requires_audio": False,
@@ -85,6 +87,7 @@ MODEL_CONFIGS = {
         "default_guide_scale": 3.0,
         "frame_num": 49,
         "sample_fps": 24,
+        "num_heads": 24,  # For Ulysses parallelism - GPU count must divide this evenly
         "requires_image": False,
         "requires_video": False,
         "requires_audio": False,
@@ -104,6 +107,7 @@ MODEL_CONFIGS = {
         "frame_num": None,  # Determined by audio length
         "infer_frames": 80,
         "sample_fps": 16,
+        "num_heads": 40,  # For Ulysses parallelism - GPU count must divide this evenly
         "requires_image": True,
         "requires_video": False,
         "requires_audio": True,
@@ -124,6 +128,7 @@ MODEL_CONFIGS = {
         "default_guide_scale": 1.0,
         "frame_num": 77,
         "sample_fps": 30,
+        "num_heads": 40,  # For Ulysses parallelism - GPU count must divide this evenly
         "requires_image": True,
         "requires_video": True,
         "requires_audio": False,  # Optional
@@ -159,6 +164,35 @@ DEFAULT_PROMPTS = {
     ),
 }
 
+# Example prompts for quick testing (3 per task)
+EXAMPLE_PROMPTS = {
+    "t2v-A14B": [
+        "A majestic dragon soars through clouds at sunset, scales shimmering with golden light",
+        "A bustling Tokyo street at night, neon signs reflecting on wet pavement as people rush by",
+        "A serene underwater coral reef with colorful fish swimming among swaying sea plants",
+    ],
+    "i2v-A14B": [
+        "The scene comes alive with natural movement and subtle camera motion",
+        "Gentle wind causes elements to sway naturally while the camera slowly zooms in",
+        "Dynamic lighting shifts across the scene as clouds pass overhead",
+    ],
+    "ti2v-5B": [
+        "A time-lapse of a blooming flower opening its petals as morning sun illuminates the scene",
+        "A lone astronaut explores an alien landscape under a sky with two moons",
+        "A cozy coffee shop interior with steam rising from fresh cups as rain patters on windows",
+    ],
+    "s2v-14B": [
+        "The speaker delivers a passionate speech with expressive gestures and animated facial expressions",
+        "Natural conversation with authentic lip sync, eye contact, and subtle head movements",
+        "Friendly narration with warm smile, occasional blinks, and gentle head nods for emphasis",
+    ],
+    "animate-14B": [
+        "Replicate the dancing movements with fluid motion and energetic expressions",
+        "Match the gestures and body language exactly as shown in the reference video",
+        "Perform the athletic movements with precision and natural flow",
+    ],
+}
+
 def init_session_state():
     """Initialize session state for all tasks."""
     if "initialized" not in st.session_state:
@@ -177,3 +211,56 @@ def init_session_state():
 def get_task_session_key(task: str) -> str:
     """Convert task name to session state key format."""
     return task.replace("-", "_")
+
+
+def render_example_prompts(task: str, prompt_key: str = "prompt"):
+    """
+    Render example prompt buttons in a 3-column layout.
+
+    Args:
+        task: Task name (e.g., "t2v-A14B")
+        prompt_key: Session state key for the prompt text area
+    """
+    examples = EXAMPLE_PROMPTS.get(task, [])
+    if not examples:
+        return
+
+    # Add custom CSS for the example buttons (matching Medgemma style)
+    st.markdown("""
+        <style>
+        div[data-testid="stHorizontalBlock"] > div[data-testid="column"] > div > button {
+            white-space: normal;
+            height: auto;
+            min-height: 60px;
+            padding: 0.75rem;
+            text-align: left;
+            font-size: 0.85rem;
+            line-height: 1.3;
+            transition: all 0.2s ease;
+        }
+        div[data-testid="stHorizontalBlock"] > div[data-testid="column"] > div > button:hover {
+            background-color: rgba(240, 242, 246, 0.1);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown("#### Try these examples:")
+
+    # Create three columns for the example buttons
+    cols = st.columns(3)
+
+    # Create a button in each column
+    for idx, (col, example) in enumerate(zip(cols, examples)):
+        with col:
+            # Use a shortened version for button label if too long
+            if len(example) > 60:
+                button_label = example[:57] + "..."
+            else:
+                button_label = example
+
+            if st.button(button_label, key=f"example_{task}_{idx}", use_container_width=True):
+                # Store the example prompt to fill the text area
+                st.session_state[f"{task.replace('-', '_')}_example_clicked"] = example
+                st.rerun()

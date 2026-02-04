@@ -25,6 +25,7 @@ from utils.config import (
     PROMPT_EXTEND_METHOD,
     PROMPT_EXTEND_MODEL,
     get_task_session_key,
+    render_example_prompts,
 )
 from utils.generation import run_generation
 from utils.metadata import create_metadata
@@ -50,6 +51,10 @@ render_page_header(
 # Initialize session state for this page
 if f"{TASK_KEY}_extended_prompt" not in st.session_state:
     st.session_state[f"{TASK_KEY}_extended_prompt"] = None
+if f"{TASK_KEY}_generating" not in st.session_state:
+    st.session_state[f"{TASK_KEY}_generating"] = False
+if f"{TASK_KEY}_cancel_requested" not in st.session_state:
+    st.session_state[f"{TASK_KEY}_cancel_requested"] = False
 
 # Auto-select optimal defaults
 resolution = CONFIG["default_size"]
@@ -60,7 +65,11 @@ with st.sidebar:
     st.header("Settings")
 
     # GPU selection with usage visualization
-    num_gpus = render_gpu_selector(default_value=1)
+    num_gpus, gpu_ids = render_gpu_selector(
+        default_value=1,
+        allow_gpu_selection=True,
+        num_heads=CONFIG.get("num_heads"),
+    )
 
     st.divider()
 
@@ -120,12 +129,27 @@ if project_dir.exists():
 # Prompt section
 st.subheader("Prompts")
 
+# Check if an example was clicked
+if f"{TASK_KEY}_example_clicked" in st.session_state:
+    example_text = st.session_state[f"{TASK_KEY}_example_clicked"]
+    del st.session_state[f"{TASK_KEY}_example_clicked"]
+    # Use the example as the default value
+    default_prompt = example_text
+else:
+    default_prompt = DEFAULT_PROMPTS[TASK]
+
 prompt = st.text_area(
     "Your Prompt",
-    value=DEFAULT_PROMPTS[TASK],
+    value=default_prompt,
     height=120,
     help="Describe the video you want to generate",
+    key=f"{TASK_KEY}_prompt_input",
 )
+
+# Example prompts
+render_example_prompts(TASK)
+
+st.divider()
 
 # Prompt extension button
 col1, col2 = st.columns([1, 4])
@@ -155,50 +179,74 @@ if st.session_state.get(f"{TASK_KEY}_extended_prompt"):
 # Generate button
 st.divider()
 
-if st.button("Generate Video", type="primary", use_container_width=True):
-    if not prompt.strip():
-        st.error("Please enter a prompt")
-    else:
-        generation_start = datetime.now()
+if st.session_state.get(f"{TASK_KEY}_generating", False):
+    # Show cancel button while generating
+    if st.button("⏹️ Cancel Generation", type="secondary", use_container_width=True):
+        st.session_state[f"{TASK_KEY}_cancel_requested"] = True
+        st.rerun()
+else:
+    # Show generate button
+    if st.button("Generate Video", type="primary", use_container_width=True):
+        if not prompt.strip():
+            st.error("Please enter a prompt")
+        else:
+            # Set generating flag
+            st.session_state[f"{TASK_KEY}_generating"] = True
+            st.session_state[f"{TASK_KEY}_cancel_requested"] = False
 
-        # Create project directory
-        project_dir.mkdir(parents=True, exist_ok=True)
+            generation_start = datetime.now()
 
-        # Generate output filename
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        final_output = project_dir / f"output_{timestamp}.mp4"
+            # Create project directory
+            project_dir.mkdir(parents=True, exist_ok=True)
 
-        # Use extended prompt if available
-        generation_prompt = st.session_state.get(f"{TASK_KEY}_extended_prompt") or prompt
+            # Generate output filename
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            final_output = project_dir / f"output_{timestamp}.mp4"
 
-        with st.status("Generating video...", expanded=True) as status:
-            st.write(f"Running on {num_gpus} GPU(s)...")
-            st.write(f"Resolution: {resolution}, Frames: {frame_num}")
-            st.write(f"Prompt: {generation_prompt[:100]}...")
+            # Use extended prompt if available
+            generation_prompt = st.session_state.get(f"{TASK_KEY}_extended_prompt") or prompt
 
-            success, output, generation_time = run_generation(
-                task=TASK,
-                output_file=final_output,
-                prompt=generation_prompt,
-                num_gpus=num_gpus,
-                resolution=resolution,
-                sample_steps=sample_steps,
-                sample_solver=sample_solver,
-                sample_shift=sample_shift,
-                sample_guide_scale=sample_guide_scale,
-                seed=seed,
-                frame_num=frame_num,
-                use_prompt_extend=False,  # Already extended in UI
-            )
+            # Cancellation check function
+            def check_cancellation():
+                return st.session_state.get(f"{TASK_KEY}_cancel_requested", False)
 
-            if not success:
-                status.update(label="Generation failed", state="error")
-                st.error(output)
-                st.stop()
+            with st.status("Generating video...", expanded=True) as status:
+                st.write(f"Running on {num_gpus} GPU(s)...")
+                st.write(f"Resolution: {resolution}, Frames: {frame_num}")
+                st.write(f"Prompt: {generation_prompt[:100]}...")
 
-            status.update(label=f"Generation complete ({format_duration(generation_time)})", state="complete")
+                success, output, generation_time = run_generation(
+                    task=TASK,
+                    output_file=final_output,
+                    prompt=generation_prompt,
+                    num_gpus=num_gpus,
+                    resolution=resolution,
+                    sample_steps=sample_steps,
+                    sample_solver=sample_solver,
+                    sample_shift=sample_shift,
+                    sample_guide_scale=sample_guide_scale,
+                    seed=seed,
+                    frame_num=frame_num,
+                    gpu_ids=gpu_ids,
+                    use_prompt_extend=False,  # Already extended in UI
+                    cancellation_check=check_cancellation,
+                )
 
-        generation_end = datetime.now()
+                # Reset generating flag
+                st.session_state[f"{TASK_KEY}_generating"] = False
+
+                if not success:
+                    if "cancelled by user" in output.lower():
+                        status.update(label="Generation cancelled", state="error")
+                        st.warning("Generation was cancelled.")
+                    else:
+                        status.update(label="Generation failed", state="error")
+                        st.error(output)
+                    st.stop()
+
+                status.update(label=f"Generation complete ({format_duration(generation_time)})", state="complete")
+
+            generation_end = datetime.now()
 
         # Get output video info
         video_info = get_video_info(final_output)

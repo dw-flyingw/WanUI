@@ -157,8 +157,12 @@ def run_generation(
     num_clip: Optional[int] = None,
     # I2V/T2V-specific
     frame_num: Optional[int] = None,
+    # GPU selection
+    gpu_ids: Optional[list[int]] = None,
     # Timeout
     timeout: int = 7200,
+    # Cancellation support
+    cancellation_check: Optional[callable] = None,
 ) -> tuple[bool, str, float]:
     """
     Run the generation pipeline for any Wan2.2 task.
@@ -190,7 +194,11 @@ def run_generation(
         start_from_ref: Start from reference image (for s2v)
         num_clip: Number of video clips (for s2v)
         frame_num: Number of frames (for t2v, i2v)
+        gpu_ids: List of GPU IDs to use (e.g., [0,1,2,3] or [1,2,3]).
+                 If None, uses GPUs 0 to num_gpus-1. Length must match num_gpus.
         timeout: Timeout in seconds
+        cancellation_check: Optional callable that returns True if cancellation is requested.
+                          Checked every 500ms during generation.
 
     Returns:
         Tuple of (success, output_or_error, elapsed_seconds)
@@ -202,9 +210,20 @@ def run_generation(
 
     ckpt_dir = config["checkpoint"]
 
+    # Validate GPU IDs
+    if gpu_ids is not None:
+        if len(gpu_ids) != num_gpus:
+            return False, f"Length of gpu_ids ({len(gpu_ids)}) must match num_gpus ({num_gpus})", 0.0
+        if len(set(gpu_ids)) != len(gpu_ids):
+            return False, f"Duplicate GPU IDs in gpu_ids: {gpu_ids}", 0.0
+
     # Set up environment with Wan2.2 in PYTHONPATH
     env = os.environ.copy()
     env["PYTHONPATH"] = f"{WAN2_2_ROOT}:{env.get('PYTHONPATH', '')}"
+
+    # Set CUDA_VISIBLE_DEVICES if specific GPUs requested
+    if gpu_ids is not None:
+        env["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, gpu_ids))
 
     # Build command
     if num_gpus > 1:
@@ -293,21 +312,60 @@ def run_generation(
             cmd.extend(["--num_clip", str(num_clip)])
 
     try:
-        result = subprocess.run(
+        # Start process (non-blocking to allow cancellation)
+        process = subprocess.Popen(
             cmd,
             cwd=str(WAN2_2_ROOT),
             env=env,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
-            timeout=timeout,
         )
+
+        # Poll until complete or cancelled
+        start_poll_time = time.time()
+        while process.poll() is None:
+            # Check for cancellation request
+            if cancellation_check and cancellation_check():
+                process.terminate()
+                try:
+                    process.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    # Force kill if graceful termination fails
+                    process.kill()
+                    process.wait()
+                elapsed = time.time() - start_time
+                return False, "Generation cancelled by user", elapsed
+
+            # Check for timeout
+            if time.time() - start_poll_time > timeout:
+                process.terminate()
+                try:
+                    process.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait()
+                elapsed = time.time() - start_time
+                return False, f"Generation timed out after {timeout} seconds", elapsed
+
+            time.sleep(0.5)  # Check every 500ms
+
+        # Process completed, get output
         elapsed = time.time() - start_time
-        if result.returncode != 0:
-            return False, f"Generation failed:\n{result.stderr}\n{result.stdout}", elapsed
-        return True, result.stdout, elapsed
-    except subprocess.TimeoutExpired:
-        elapsed = time.time() - start_time
-        return False, f"Generation timed out after {timeout} seconds", elapsed
+        stdout, stderr = process.communicate()
+
+        if process.returncode != 0:
+            error_msg = f"Generation failed:\n{stderr}\n{stdout}"
+            # Add helpful hints for common errors
+            if "CUDA error: out of memory" in error_msg or "CUDA out of memory" in error_msg:
+                error_msg += f"\n\nGPU Memory Issue Detected:"
+                error_msg += f"\n- Current configuration: {num_gpus} GPUs"
+                if gpu_ids:
+                    error_msg += f" (IDs: {gpu_ids})"
+                error_msg += f"\n- Try reducing num_gpus or using gpu_ids to skip busy GPUs"
+                error_msg += f"\n- Run 'nvidia-smi' to check GPU memory availability"
+            return False, error_msg, elapsed
+        return True, stdout, elapsed
     except Exception as e:
         elapsed = time.time() - start_time
         return False, f"Generation error: {str(e)}", elapsed
