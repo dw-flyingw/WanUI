@@ -2,7 +2,10 @@
 Output history system for browsing past generations.
 """
 
+import io
 import os
+import shutil
+import zipfile
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Tuple
@@ -217,3 +220,35 @@ class OutputHistory:
             if metadata.extra_settings:
                 st.write("**Extra Settings:**")
                 st.json(metadata.extra_settings)
+
+            # Action buttons
+            st.divider()
+            col1, col2 = st.columns(2)
+
+            with col1:
+                # Create zip file in memory
+                zip_buffer = io.BytesIO()
+                with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                    # Add all files from project directory
+                    for file_path in project_dir.rglob('*'):
+                        if file_path.is_file():
+                            arcname = file_path.relative_to(project_dir)
+                            zip_file.write(file_path, arcname)
+
+                zip_buffer.seek(0)
+
+                st.download_button(
+                    label="📥 Download Project",
+                    data=zip_buffer,
+                    file_name=f"{project_dir.name}.zip",
+                    mime="application/zip",
+                    use_container_width=True,
+                )
+
+            with col2:
+                if st.button("🗑️ Remove Project", type="secondary", use_container_width=True, key=f"remove_{project_dir.name}"):
+                    try:
+                        shutil.rmtree(project_dir)
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Failed to remove project: {e}")
