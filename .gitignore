@@ -4,6 +4,7 @@ output/
 CLAUDE.md
 GEMIMI.md
 *.whl
+.worktrees/
 
 
 # Byte-compiled / optimized / DLL files
