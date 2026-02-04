@@ -285,6 +285,8 @@ if st.button("Generate Video", type="primary", use_container_width=True):
             source_image_path="input/image.jpg",
             extra_settings={
                 "frame_num": frame_num,
+                "source_type": "example" if example_loaded else "upload",
+                "example_id": st.session_state.get(f"{TASK_KEY}_loaded_example_id") if example_loaded else None,
             },
         )
         metadata.save(project_dir / "metadata.json")
