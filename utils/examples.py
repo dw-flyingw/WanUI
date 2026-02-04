@@ -198,3 +198,100 @@ class ExampleLibrary:
                     st.success(f"Loaded: {example.id}")
 
         return selected_example
+
+    def display_radio_grid(
+        self,
+        task: str,
+        media_type: Optional[str] = None,
+        columns: int = 3,
+        show_none_option: bool = False,
+        key_suffix: str = ""
+    ) -> Optional[str]:
+        """
+        Display a radio button grid for selecting examples.
+
+        Args:
+            task: Task to filter examples for (e.g., "i2v-A14B")
+            media_type: Media type to filter by ('image', 'video', 'audio')
+            columns: Number of columns in the grid
+            show_none_option: If True, adds "None (Upload My Own)" as first option
+            key_suffix: Suffix for widget keys to avoid conflicts
+
+        Returns:
+            Selected example ID (str) or None
+        """
+        # Validate columns parameter
+        if columns < 1:
+            st.warning(f"Invalid columns value: {columns}. Using default of 3.")
+            columns = 3
+
+        # Get filtered examples
+        examples = self.get_examples(task=task, media_type=media_type)
+
+        if not examples and not show_none_option:
+            media_label = media_type if media_type else "media"
+            st.info(f"No example {media_label} available")
+            return None
+
+        # Build option IDs for selection
+        option_ids = []
+
+        if show_none_option:
+            option_ids.append(None)
+
+        for example in examples:
+            option_ids.append(example.id)
+
+        if not option_ids:
+            return None
+
+        # Use radio for selection (hidden labels, we'll show visual grid)
+        st.write("**Select an example:**")
+
+        # Create visual grid
+        cols = st.columns(columns)
+
+        # Initialize selection in session state if not exists
+        selection_key = f"example_selection_{task}_{key_suffix}"
+        if selection_key not in st.session_state:
+            st.session_state[selection_key] = option_ids[0]
+
+        # Render grid
+        for idx, example in enumerate(examples):
+            col = cols[idx % columns]
+
+            with col:
+                # Show thumbnail
+                if example.thumbnail.exists():
+                    st.image(str(example.thumbnail), use_container_width=True)
+                else:
+                    st.warning("No thumbnail")
+
+                # Category badge
+                st.caption(f"**{example.category}**")
+
+                # Radio button for this example
+                is_selected = st.session_state[selection_key] == example.id
+                if st.button(
+                    "Select" if not is_selected else "✓ Selected",
+                    key=f"select_{example.id}_{key_suffix}",
+                    use_container_width=True,
+                    type="primary" if is_selected else "secondary"
+                ):
+                    st.session_state[selection_key] = example.id
+                    st.rerun()
+
+        # If show_none_option, add it as a button below the grid
+        if show_none_option:
+            st.divider()
+            is_none_selected = st.session_state[selection_key] is None
+            if st.button(
+                "None (Upload My Own)" if not is_none_selected else "✓ None (Upload My Own)",
+                key=f"select_none_{key_suffix}",
+                use_container_width=True,
+                type="primary" if is_none_selected else "secondary"
+            ):
+                st.session_state[selection_key] = None
+                st.rerun()
+
+        return st.session_state[selection_key]
