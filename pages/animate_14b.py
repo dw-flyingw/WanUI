@@ -52,6 +52,16 @@ example_library = ExampleLibrary(EXAMPLES_ROOT)
 st.title("✨ Animate")
 st.markdown("Animate a character from reference image using motion from source video")
 
+# Mode selection
+mode = st.radio(
+    "Mode",
+    ["replacement", "animation"],
+    help="Animation: Mimics motion from video. Replacement: Replaces person in video.",
+    horizontal=True,
+)
+
+st.divider()
+
 # Initialize session state for this page
 if f"{TASK_KEY}_extended_prompt" not in st.session_state:
     st.session_state[f"{TASK_KEY}_extended_prompt"] = None
@@ -74,13 +84,6 @@ if f"{TASK_KEY}_loaded_image_example_id" not in st.session_state:
 # Sidebar configuration
 with st.sidebar:
     st.header("Configuration")
-
-    # Mode selection
-    mode = st.radio(
-        "Mode",
-        ["replacement", "animation"],
-        help="Animation: Mimics motion from video. Replacement: Replaces person in video.",
-    )
 
     # Auto-select optimal defaults
     resolution = CONFIG["default_size"]
