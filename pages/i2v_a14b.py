@@ -18,6 +18,7 @@ from utils.common import (
     sanitize_project_name,
     save_uploaded_file,
 )
+from utils.examples import ExampleLibrary
 from utils.gpu import render_gpu_selector
 from utils.config import (
     DEFAULT_PROMPTS,
@@ -40,6 +41,9 @@ CONFIG = MODEL_CONFIGS[TASK]
 render_sidebar_header()
 load_custom_theme()
 
+# Initialize example library
+EXAMPLES_ROOT = Path(__file__).parent.parent / "assets" / "examples"
+example_library = ExampleLibrary(EXAMPLES_ROOT)
 
 st.title("🖼️ Image to Video")
 st.markdown("Generate video from an image with text guidance using the I2V-A14B model")
@@ -57,7 +61,11 @@ with st.sidebar:
     st.header("Settings")
 
     # GPU selection with usage visualization
-    num_gpus = render_gpu_selector(default_value=1)
+    num_gpus, gpu_ids = render_gpu_selector(
+        default_value=1,
+        allow_gpu_selection=True,
+        num_heads=CONFIG.get("num_heads"),
+    )
 
     st.divider()
 
@@ -99,13 +107,59 @@ with st.sidebar:
 
 # Input image
 st.subheader("Input Image")
-uploaded_image = st.file_uploader(
-    "Upload source image",
-    type=["jpg", "jpeg", "png", "webp"],
-    help="Image to animate. Output aspect ratio will match this image.",
-)
-if uploaded_image:
-    st.image(uploaded_image, use_container_width=True)
+
+# Check if example is loaded
+example_loaded = st.session_state.get(f"{TASK_KEY}_example_loaded", False)
+loaded_example_path = st.session_state.get(f"{TASK_KEY}_loaded_example_path")
+loaded_example_id = st.session_state.get(f"{TASK_KEY}_loaded_example_id")
+
+if example_loaded and loaded_example_path:
+    # Show loaded example with change button
+    st.image(str(loaded_example_path), use_container_width=True)
+    st.caption(f"Using example: **{loaded_example_id}**")
+
+    if st.button("📝 Change image", key="change_image_btn"):
+        # Clear example state to re-show selectors
+        st.session_state[f"{TASK_KEY}_example_loaded"] = False
+        st.session_state[f"{TASK_KEY}_loaded_example_path"] = None
+        st.session_state[f"{TASK_KEY}_loaded_example_id"] = None
+        st.rerun()
+else:
+    # Show file uploader
+    uploaded_image = st.file_uploader(
+        "Upload source image",
+        type=["jpg", "jpeg", "png", "webp"],
+        help="Image to animate. Output aspect ratio will match this image.",
+    )
+    if uploaded_image:
+        st.image(uploaded_image, use_container_width=True)
+
+    # Show example selector
+    st.divider()
+    st.write("**OR select an example image:**")
+
+    # Display radio grid
+    selected_id = example_library.display_radio_grid(
+        task=TASK,
+        media_type="image",
+        columns=3,
+        show_none_option=example_loaded,  # Show "None" option if coming from loaded state
+        key_suffix="i2v"
+    )
+
+    # Load button
+    if selected_id is not None:
+        if st.button("Load Selected Example", type="primary", use_container_width=True):
+            # Get example details
+            example = example_library.get_example_by_id(selected_id)
+            if example and example.path.exists():
+                # Set session state
+                st.session_state[f"{TASK_KEY}_example_loaded"] = True
+                st.session_state[f"{TASK_KEY}_loaded_example_path"] = example.path
+                st.session_state[f"{TASK_KEY}_loaded_example_id"] = example.id
+                st.rerun()
+            else:
+                st.error(f"Example file not found: {selected_id}")
 
 # Project name
 st.subheader("Project")
@@ -202,6 +256,7 @@ if st.button("Generate Video", type="primary", use_container_width=True):
                 sample_solver=sample_solver,
                 sample_shift=sample_shift,
                 sample_guide_scale=sample_guide_scale,
+                gpu_ids=gpu_ids,
                 seed=seed,
                 image_path=image_path,
                 frame_num=frame_num,
