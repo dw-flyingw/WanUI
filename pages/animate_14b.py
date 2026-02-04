@@ -2,6 +2,7 @@
 Animate-14B page for character animation and replacement.
 """
 
+import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -19,6 +20,7 @@ from utils.common import (
     sanitize_project_name,
     save_uploaded_file,
 )
+from utils.examples import ExampleLibrary
 from utils.gpu import render_gpu_selector
 from utils.config import (
     DEFAULT_PROMPTS,
@@ -27,6 +29,7 @@ from utils.config import (
     PROMPT_EXTEND_METHOD,
     PROMPT_EXTEND_MODEL,
     get_task_session_key,
+    render_example_prompts,
 )
 from utils.generation import run_generation, run_preprocessing
 from utils.metadata import create_metadata
@@ -41,6 +44,10 @@ CONFIG = MODEL_CONFIGS[TASK]
 render_sidebar_header()
 load_custom_theme()
 
+# Initialize example library
+EXAMPLES_ROOT = Path(__file__).parent.parent / "assets" / "examples"
+example_library = ExampleLibrary(EXAMPLES_ROOT)
+
 
 st.title("✨ Animate")
 st.markdown("Animate a character from reference image using motion from source video")
@@ -48,6 +55,21 @@ st.markdown("Animate a character from reference image using motion from source v
 # Initialize session state for this page
 if f"{TASK_KEY}_extended_prompt" not in st.session_state:
     st.session_state[f"{TASK_KEY}_extended_prompt"] = None
+
+# Initialize example selector session state
+if f"{TASK_KEY}_video_example_loaded" not in st.session_state:
+    st.session_state[f"{TASK_KEY}_video_example_loaded"] = False
+if f"{TASK_KEY}_loaded_video_example_path" not in st.session_state:
+    st.session_state[f"{TASK_KEY}_loaded_video_example_path"] = None
+if f"{TASK_KEY}_loaded_video_example_id" not in st.session_state:
+    st.session_state[f"{TASK_KEY}_loaded_video_example_id"] = None
+
+if f"{TASK_KEY}_image_example_loaded" not in st.session_state:
+    st.session_state[f"{TASK_KEY}_image_example_loaded"] = False
+if f"{TASK_KEY}_loaded_image_example_path" not in st.session_state:
+    st.session_state[f"{TASK_KEY}_loaded_image_example_path"] = None
+if f"{TASK_KEY}_loaded_image_example_id" not in st.session_state:
+    st.session_state[f"{TASK_KEY}_loaded_image_example_id"] = None
 
 # Sidebar configuration
 with st.sidebar:
@@ -102,23 +124,115 @@ col1, col2 = st.columns(2)
 
 with col1:
     st.subheader("Source Video")
-    uploaded_video = st.file_uploader(
-        "Upload driving video",
-        type=["mp4", "avi", "mov", "mkv"],
-        help="Video containing the motion to transfer",
-    )
-    if uploaded_video:
-        st.video(uploaded_video)
+
+    video_example_loaded = st.session_state.get(f"{TASK_KEY}_video_example_loaded", False)
+
+    if video_example_loaded:
+        # Show loaded example
+        example_path = st.session_state[f"{TASK_KEY}_loaded_video_example_path"]
+        example_id = st.session_state[f"{TASK_KEY}_loaded_video_example_id"]
+
+        st.success(f"Using example: `{example_id}`")
+        if example_path and Path(example_path).exists():
+            st.video(str(example_path))
+
+        # Clear button
+        if st.button("Clear Example (Upload My Own)", key="clear_video_example", use_container_width=True):
+            st.session_state[f"{TASK_KEY}_video_example_loaded"] = False
+            st.session_state[f"{TASK_KEY}_loaded_video_example_path"] = None
+            st.session_state[f"{TASK_KEY}_loaded_video_example_id"] = None
+            st.rerun()
+    else:
+        # Show file uploader
+        uploaded_video = st.file_uploader(
+            "Upload driving video",
+            type=["mp4", "avi", "mov", "mkv"],
+            help="Video containing the motion to transfer",
+        )
+        if uploaded_video:
+            st.video(uploaded_video)
+
+        # Show example selector
+        st.divider()
+        st.write("**OR select an example video:**")
+
+        # Display radio grid
+        selected_video_id = example_library.display_radio_grid(
+            task=TASK,
+            media_type="video",
+            columns=2,
+            show_none_option=video_example_loaded,
+            key_suffix="animate_video"
+        )
+
+        # Load button
+        if selected_video_id is not None:
+            if st.button("Load Selected Example", key="load_video_example", type="primary", use_container_width=True):
+                # Get example details
+                example = example_library.get_example_by_id(selected_video_id)
+                if example and example.path.exists():
+                    st.session_state[f"{TASK_KEY}_video_example_loaded"] = True
+                    st.session_state[f"{TASK_KEY}_loaded_video_example_path"] = example.path
+                    st.session_state[f"{TASK_KEY}_loaded_video_example_id"] = example.id
+                    st.rerun()
+                else:
+                    st.error(f"Example file not found: {selected_video_id}")
 
 with col2:
     st.subheader("Reference Image")
-    uploaded_image = st.file_uploader(
-        "Upload reference image",
-        type=["jpg", "jpeg", "png", "webp"],
-        help="Image of the character to animate",
-    )
-    if uploaded_image:
-        st.image(uploaded_image, use_container_width=True)
+
+    image_example_loaded = st.session_state.get(f"{TASK_KEY}_image_example_loaded", False)
+
+    if image_example_loaded:
+        # Show loaded example
+        example_path = st.session_state[f"{TASK_KEY}_loaded_image_example_path"]
+        example_id = st.session_state[f"{TASK_KEY}_loaded_image_example_id"]
+
+        st.success(f"Using example: `{example_id}`")
+        if example_path and Path(example_path).exists():
+            st.image(str(example_path), use_container_width=True)
+
+        # Clear button
+        if st.button("Clear Example (Upload My Own)", key="clear_image_example", use_container_width=True):
+            st.session_state[f"{TASK_KEY}_image_example_loaded"] = False
+            st.session_state[f"{TASK_KEY}_loaded_image_example_path"] = None
+            st.session_state[f"{TASK_KEY}_loaded_image_example_id"] = None
+            st.rerun()
+    else:
+        # Show file uploader
+        uploaded_image = st.file_uploader(
+            "Upload reference image",
+            type=["jpg", "jpeg", "png", "webp"],
+            help="Image of the character to animate",
+        )
+        if uploaded_image:
+            st.image(uploaded_image, use_container_width=True)
+
+        # Show example selector
+        st.divider()
+        st.write("**OR select an example image:**")
+
+        # Display radio grid
+        selected_image_id = example_library.display_radio_grid(
+            task=TASK,
+            media_type="image",
+            columns=2,
+            show_none_option=image_example_loaded,
+            key_suffix="animate_image"
+        )
+
+        # Load button
+        if selected_image_id is not None:
+            if st.button("Load Selected Example", key="load_image_example", type="primary", use_container_width=True):
+                # Get example details
+                example = example_library.get_example_by_id(selected_image_id)
+                if example and example.path.exists():
+                    st.session_state[f"{TASK_KEY}_image_example_loaded"] = True
+                    st.session_state[f"{TASK_KEY}_loaded_image_example_path"] = example.path
+                    st.session_state[f"{TASK_KEY}_loaded_image_example_id"] = example.id
+                    st.rerun()
+                else:
+                    st.error(f"Example file not found: {selected_image_id}")
 
 # Audio options
 st.subheader("Audio")
@@ -196,10 +310,13 @@ if st.session_state.get(f"{TASK_KEY}_extended_prompt"):
 st.divider()
 
 if st.button("Generate Animation", type="primary", use_container_width=True):
-    if not uploaded_video:
-        st.error("Please upload a source video")
-    elif not uploaded_image:
-        st.error("Please upload a reference image")
+    # Check for video input (either uploaded or example)
+    video_example_loaded = st.session_state.get(f"{TASK_KEY}_video_example_loaded", False)
+    if not uploaded_video and not video_example_loaded:
+        st.error("Please upload a source video or select an example")
+    # Check for image input (either uploaded or example)
+    elif not uploaded_image and not st.session_state.get(f"{TASK_KEY}_image_example_loaded", False):
+        st.error("Please upload a reference image or select an example")
     elif not prompt.strip():
         st.error("Please enter a prompt")
     else:
@@ -212,9 +329,23 @@ if st.button("Generate Animation", type="primary", use_container_width=True):
         processed_dir = project_dir / "processed"
         processed_dir.mkdir(parents=True, exist_ok=True)
 
-        # Save uploaded files
-        video_path = save_uploaded_file(uploaded_video, input_dir / "video.mp4")
-        image_path = save_uploaded_file(uploaded_image, input_dir / "image.jpg")
+        # Save or copy video (uploaded vs example)
+        if uploaded_video:
+            video_path = save_uploaded_file(uploaded_video, input_dir / "video.mp4")
+        else:
+            # Copy from example
+            example_video_path = Path(st.session_state[f"{TASK_KEY}_loaded_video_example_path"])
+            video_path = input_dir / "video.mp4"
+            shutil.copy(example_video_path, video_path)
+
+        # Save or copy image (uploaded vs example)
+        if uploaded_image:
+            image_path = save_uploaded_file(uploaded_image, input_dir / "image.jpg")
+        else:
+            # Copy from example
+            example_image_path = Path(st.session_state[f"{TASK_KEY}_loaded_image_example_path"])
+            image_path = input_dir / "image.jpg"
+            shutil.copy(example_image_path, image_path)
 
         # Handle audio based on user selection
         audio_path = None
