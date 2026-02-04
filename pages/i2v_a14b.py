@@ -2,6 +2,7 @@
 I2V-A14B page for Image-to-Video generation.
 """
 
+import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -51,6 +52,13 @@ st.markdown("Generate video from an image with text guidance using the I2V-A14B 
 # Initialize session state for this page
 if f"{TASK_KEY}_extended_prompt" not in st.session_state:
     st.session_state[f"{TASK_KEY}_extended_prompt"] = None
+# Initialize example selector session state
+if f"{TASK_KEY}_example_loaded" not in st.session_state:
+    st.session_state[f"{TASK_KEY}_example_loaded"] = False
+if f"{TASK_KEY}_loaded_example_path" not in st.session_state:
+    st.session_state[f"{TASK_KEY}_loaded_example_path"] = None
+if f"{TASK_KEY}_loaded_example_id" not in st.session_state:
+    st.session_state[f"{TASK_KEY}_loaded_example_id"] = None
 
 # Auto-select optimal defaults
 resolution = CONFIG["default_size"]
@@ -104,6 +112,9 @@ with st.sidebar:
     st.divider()
 
 # Prompt extension available via button in main area
+
+# Initialize image source variables
+uploaded_image = None
 
 # Input image
 st.subheader("Input Image")
@@ -218,8 +229,15 @@ if st.session_state.get(f"{TASK_KEY}_extended_prompt"):
 st.divider()
 
 if st.button("Generate Video", type="primary", use_container_width=True):
-    if not uploaded_image:
-        st.error("Please upload a source image")
+    # Determine image source
+    example_loaded = st.session_state.get(f"{TASK_KEY}_example_loaded", False)
+    loaded_example_path = st.session_state.get(f"{TASK_KEY}_loaded_example_path")
+
+    # Validate input
+    if not example_loaded and not uploaded_image:
+        st.error("Please upload a source image or select an example")
+    elif example_loaded and not loaded_example_path:
+        st.error("Example path not found. Please select an example again.")
     else:
         generation_start = datetime.now()
 
@@ -228,8 +246,34 @@ if st.button("Generate Video", type="primary", use_container_width=True):
         input_dir = project_dir / "input"
         input_dir.mkdir(parents=True, exist_ok=True)
 
-        # Save uploaded image
-        image_path = save_uploaded_file(uploaded_image, input_dir / "image.jpg")
+        # Determine and save image source
+        if example_loaded:
+            # Copy example to input directory
+            try:
+                if not loaded_example_path.exists():
+                    st.error(f"Example image file not found: {loaded_example_path}")
+                    st.session_state[f"{TASK_KEY}_example_loaded"] = False
+                    st.stop()
+
+                image_path = input_dir / "image.jpg"
+                with st.spinner("Preparing example image..."):
+                    shutil.copy2(loaded_example_path, image_path)
+
+                # Verify copy succeeded
+                if not image_path.exists() or image_path.stat().st_size == 0:
+                    st.error("Failed to prepare input image. Please try again.")
+                    st.stop()
+
+            except (IOError, PermissionError) as e:
+                st.error(f"Failed to copy example image: {e}")
+                st.stop()
+        else:
+            # Save uploaded image
+            try:
+                image_path = save_uploaded_file(uploaded_image, input_dir / "image.jpg")
+            except Exception as e:
+                st.error(f"Failed to save uploaded image: {e}")
+                st.stop()
 
         # Generate output filename
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -296,6 +340,8 @@ if st.button("Generate Video", type="primary", use_container_width=True):
             source_image_path="input/image.jpg",
             extra_settings={
                 "frame_num": frame_num,
+                "source_type": "example" if example_loaded else "upload",
+                "example_id": st.session_state.get(f"{TASK_KEY}_loaded_example_id") if example_loaded else None,
             },
         )
         metadata.save(project_dir / "metadata.json")
@@ -344,10 +390,12 @@ st.markdown(
     """
 **Tips:**
 - Upload an image and describe how you want it to animate
+- **Or select an example image below the uploader to try pre-configured samples**
 - Leave the prompt empty to let the model automatically determine motion
 - Output video aspect ratio will match your input image
 - Click "Extend Prompt" to enhance your description with cinematic elements
 - Use 2+ GPUs for faster generation with FSDP parallelism
+- **Click "Change image" to switch between uploaded and example images**
 """
 )
 
