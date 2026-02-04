@@ -335,10 +335,12 @@ st.markdown(
     """
 **Tips:**
 - Upload an image and describe how you want it to animate
+- **Or select an example image below the uploader to try pre-configured samples**
 - Leave the prompt empty to let the model automatically determine motion
 - Output video aspect ratio will match your input image
 - Click "Extend Prompt" to enhance your description with cinematic elements
 - Use 2+ GPUs for faster generation with FSDP parallelism
+- **Click "Change image" to switch between uploaded and example images**
 """
 )
 
