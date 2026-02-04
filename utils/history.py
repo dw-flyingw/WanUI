@@ -167,24 +167,8 @@ class OutputHistory:
             st.warning("Output video not found")
 
         # Display project info
-        st.caption(f"**{metadata.task}**")
-
-        # Format timestamp
-        try:
-            timestamp = datetime.fromisoformat(metadata.timestamp)
-            time_str = timestamp.strftime("%Y-%m-%d %H:%M")
-        except:
-            time_str = metadata.timestamp
-
-        st.caption(f"📅 {time_str}")
-        st.caption(f"📐 {metadata.resolution}")
-        st.caption(f"⏱️ {metadata.output_video_length_seconds:.1f}s")
-
-        # Display prompt snippet
-        prompt_snippet = metadata.user_prompt[:80]
-        if len(metadata.user_prompt) > 80:
-            prompt_snippet += "..."
-        st.caption(f"💬 {prompt_snippet}")
+        st.caption(f"**Model:** {metadata.task}")
+        st.caption(f"**Project:** {project_dir.name}")
 
         # Expandable details
         with st.expander("View Details"):
