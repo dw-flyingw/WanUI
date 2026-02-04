@@ -10,7 +10,6 @@ import streamlit as st
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from utils.history import OutputHistory
 from utils.sidebar import render_sidebar_header, render_sidebar_footer
 from utils.theme import load_custom_theme
 
@@ -39,34 +38,6 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
-
-# Recent Outputs Section
-st.markdown("### Recent Outputs")
-st.markdown(
-    '<p style="color: #a0a0a0; margin-bottom: 1.5rem;">Latest video generations from all models</p>',
-    unsafe_allow_html=True,
-)
-
-history = OutputHistory()
-recent_projects = history.get_recent(limit=8)
-
-if recent_projects:
-    history.display_gallery_grid(recent_projects, columns=4)
-else:
-    st.info(
-        """
-        No recent outputs yet. Generate your first video using one of the models above!
-
-        **Quick Start:**
-        1. Choose a model from the cards above
-        2. Navigate to the model page using the sidebar
-        3. Upload your inputs (if required)
-        4. Enter a prompt
-        5. Click "Generate" and watch the magic happen!
-        """
-    )
-
-st.divider()
 
 # Quick Start Guide
 st.markdown("### Quick Start Guide")
@@ -203,22 +174,6 @@ with st.expander("✨  Character Animation (Animate-14B)", expanded=False):
         """
     )
 
-st.divider()
-
-# Footer
-st.markdown(
-    """
-    <div style="text-align: center; padding: 3rem 0 2rem 0; color: #606060; border-top: 1px solid rgba(255, 255, 255, 0.08); margin-top: 3rem;">
-        <p style="font-size: 0.9rem; margin-bottom: 0.5rem;">
-            <span style="color: #00d4ff; font-weight: 600;">Powered by Wan2.2 Models</span> | Built with Streamlit
-        </p>
-        <p style="font-size: 0.85rem; color: #606060;">
-            For best results, use portrait images for S2V, clear motion for Animate, and descriptive prompts for T2V/I2V
-        </p>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
 
 # Render sidebar footer with HPE badge
 render_sidebar_footer()

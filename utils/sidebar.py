@@ -31,7 +31,6 @@ def render_sidebar_footer():
     with st.sidebar:
         # Add spacing before footer
         st.markdown("<br>", unsafe_allow_html=True)
-        st.divider()
 
         # Render Wan2.2 badge
         render_wan22_badge()
