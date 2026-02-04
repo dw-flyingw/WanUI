@@ -47,6 +47,13 @@ st.markdown("Generate video from an image with text guidance using the I2V-A14B 
 # Initialize session state for this page
 if f"{TASK_KEY}_extended_prompt" not in st.session_state:
     st.session_state[f"{TASK_KEY}_extended_prompt"] = None
+# Initialize example selector session state
+if f"{TASK_KEY}_example_loaded" not in st.session_state:
+    st.session_state[f"{TASK_KEY}_example_loaded"] = False
+if f"{TASK_KEY}_loaded_example_path" not in st.session_state:
+    st.session_state[f"{TASK_KEY}_loaded_example_path"] = None
+if f"{TASK_KEY}_loaded_example_id" not in st.session_state:
+    st.session_state[f"{TASK_KEY}_loaded_example_id"] = None
 
 # Auto-select optimal defaults
 resolution = CONFIG["default_size"]
@@ -96,6 +103,9 @@ with st.sidebar:
     st.divider()
 
 # Prompt extension available via button in main area
+
+# Initialize image source variables
+uploaded_image = None
 
 # Input image
 st.subheader("Input Image")
