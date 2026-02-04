@@ -51,14 +51,12 @@ animate_page = st.Page("pages/animate_14b.py", title="Animate")
 
 # Utility pages
 gallery_page = st.Page("pages/gallery.py", title="Gallery")
-examples_page = st.Page("pages/examples.py", title="Examples")
 
 # Navigation with sections
 pg = st.navigation(
     {
         "Overview": [home_page, gallery_page],
         "Models": [t2v_page, i2v_page, ti2v_page, s2v_page, animate_page],
-        "Library": [examples_page],
     },
     position="sidebar",
 )
