@@ -2,6 +2,7 @@
 S2V-14B page for Speech-to-Video generation.
 """
 
+import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -18,6 +19,7 @@ from utils.common import (
     sanitize_project_name,
     save_uploaded_file,
 )
+from utils.examples import ExampleLibrary
 from utils.gpu import render_gpu_selector
 from utils.config import (
     DEFAULT_PROMPTS,
@@ -41,6 +43,10 @@ CONFIG = MODEL_CONFIGS[TASK]
 render_sidebar_header()
 load_custom_theme()
 
+# Initialize example library
+EXAMPLES_ROOT = Path(__file__).parent.parent / "assets" / "examples"
+example_library = ExampleLibrary(EXAMPLES_ROOT)
+
 
 st.title("〰️ Speech to Video")
 st.markdown("Generate talking head video from audio and reference image using the S2V-14B model")
@@ -52,6 +58,28 @@ if f"{TASK_KEY}_generating" not in st.session_state:
     st.session_state[f"{TASK_KEY}_generating"] = False
 if f"{TASK_KEY}_cancel_requested" not in st.session_state:
     st.session_state[f"{TASK_KEY}_cancel_requested"] = False
+
+# Initialize example selector session state
+if f"{TASK_KEY}_image_example_loaded" not in st.session_state:
+    st.session_state[f"{TASK_KEY}_image_example_loaded"] = False
+if f"{TASK_KEY}_loaded_image_example_path" not in st.session_state:
+    st.session_state[f"{TASK_KEY}_loaded_image_example_path"] = None
+if f"{TASK_KEY}_loaded_image_example_id" not in st.session_state:
+    st.session_state[f"{TASK_KEY}_loaded_image_example_id"] = None
+
+if f"{TASK_KEY}_audio_example_loaded" not in st.session_state:
+    st.session_state[f"{TASK_KEY}_audio_example_loaded"] = False
+if f"{TASK_KEY}_loaded_audio_example_path" not in st.session_state:
+    st.session_state[f"{TASK_KEY}_loaded_audio_example_path"] = None
+if f"{TASK_KEY}_loaded_audio_example_id" not in st.session_state:
+    st.session_state[f"{TASK_KEY}_loaded_audio_example_id"] = None
+
+if f"{TASK_KEY}_pose_example_loaded" not in st.session_state:
+    st.session_state[f"{TASK_KEY}_pose_example_loaded"] = False
+if f"{TASK_KEY}_loaded_pose_example_path" not in st.session_state:
+    st.session_state[f"{TASK_KEY}_loaded_pose_example_path"] = None
+if f"{TASK_KEY}_loaded_pose_example_id" not in st.session_state:
+    st.session_state[f"{TASK_KEY}_loaded_pose_example_id"] = None
 
 # Auto-select optimal defaults
 resolution = CONFIG["default_size"]
@@ -113,13 +141,59 @@ col1, col2 = st.columns(2)
 
 with col1:
     st.subheader("Reference Image")
-    uploaded_image = st.file_uploader(
-        "Upload reference image",
-        type=["jpg", "jpeg", "png", "webp"],
-        help="Image of the person who will be speaking",
-    )
-    if uploaded_image:
-        st.image(uploaded_image, use_container_width=True)
+
+    image_example_loaded = st.session_state.get(f"{TASK_KEY}_image_example_loaded", False)
+
+    if image_example_loaded:
+        # Show loaded example
+        example_path = st.session_state[f"{TASK_KEY}_loaded_image_example_path"]
+        example_id = st.session_state[f"{TASK_KEY}_loaded_image_example_id"]
+
+        st.success(f"Using example: `{example_id}`")
+        if example_path and Path(example_path).exists():
+            st.image(str(example_path), use_container_width=True)
+
+        # Clear button
+        if st.button("Clear Example (Upload My Own)", key="clear_image_example", use_container_width=True):
+            st.session_state[f"{TASK_KEY}_image_example_loaded"] = False
+            st.session_state[f"{TASK_KEY}_loaded_image_example_path"] = None
+            st.session_state[f"{TASK_KEY}_loaded_image_example_id"] = None
+            st.rerun()
+    else:
+        # Show file uploader
+        uploaded_image = st.file_uploader(
+            "Upload reference image",
+            type=["jpg", "jpeg", "png", "webp"],
+            help="Image of the person who will be speaking",
+        )
+        if uploaded_image:
+            st.image(uploaded_image, use_container_width=True)
+
+        # Show example selector
+        st.divider()
+        st.write("**OR select an example image:**")
+
+        # Display radio grid
+        selected_image_id = example_library.display_radio_grid(
+            task=TASK,
+            media_type="image",
+            columns=2,
+            show_none_option=image_example_loaded,
+            key_suffix="s2v_image"
+        )
+
+        # Load button
+        if selected_image_id is not None:
+            if st.button("Load Selected Example", key="load_image_example", type="primary", use_container_width=True):
+                # Get example details
+                example = example_library.get_example_by_id(selected_image_id)
+                if example and example.path.exists():
+                    st.session_state[f"{TASK_KEY}_image_example_loaded"] = True
+                    st.session_state[f"{TASK_KEY}_loaded_image_example_path"] = example.path
+                    st.session_state[f"{TASK_KEY}_loaded_image_example_id"] = example.id
+                    st.rerun()
+                else:
+                    st.error(f"Example file not found: {selected_image_id}")
 
 with col2:
     st.subheader("Audio Source")
@@ -129,26 +203,114 @@ with col2:
         help="Choose how to provide audio",
     )
 
+    audio_example_loaded = st.session_state.get(f"{TASK_KEY}_audio_example_loaded", False)
+
     if audio_mode == "Upload audio file":
-        uploaded_audio = st.file_uploader(
-            "Upload audio file",
-            type=["mp3", "wav", "m4a", "aac"],
-            help="Audio file for lip sync",
-        )
-        if uploaded_audio:
-            st.audio(uploaded_audio)
+        if audio_example_loaded:
+            # Show loaded example
+            example_path = st.session_state[f"{TASK_KEY}_loaded_audio_example_path"]
+            example_id = st.session_state[f"{TASK_KEY}_loaded_audio_example_id"]
+
+            st.success(f"Using example: `{example_id}`")
+            if example_path and Path(example_path).exists():
+                st.audio(str(example_path))
+
+            # Clear button
+            if st.button("Clear Example (Upload My Own)", key="clear_audio_example", use_container_width=True):
+                st.session_state[f"{TASK_KEY}_audio_example_loaded"] = False
+                st.session_state[f"{TASK_KEY}_loaded_audio_example_path"] = None
+                st.session_state[f"{TASK_KEY}_loaded_audio_example_id"] = None
+                st.rerun()
+        else:
+            # Show file uploader
+            uploaded_audio = st.file_uploader(
+                "Upload audio file",
+                type=["mp3", "wav", "m4a", "aac"],
+                help="Audio file for lip sync",
+            )
+            if uploaded_audio:
+                st.audio(uploaded_audio)
+
+            # Show example selector
+            st.divider()
+            st.write("**OR select an example audio:**")
+
+            # Display radio grid
+            selected_audio_id = example_library.display_radio_grid(
+                task=TASK,
+                media_type="audio",
+                columns=2,
+                show_none_option=audio_example_loaded,
+                key_suffix="s2v_audio"
+            )
+
+            # Load button
+            if selected_audio_id is not None:
+                if st.button("Load Selected Example", key="load_audio_example", type="primary", use_container_width=True):
+                    # Get example details
+                    example = example_library.get_example_by_id(selected_audio_id)
+                    if example and example.path.exists():
+                        st.session_state[f"{TASK_KEY}_audio_example_loaded"] = True
+                        st.session_state[f"{TASK_KEY}_loaded_audio_example_path"] = example.path
+                        st.session_state[f"{TASK_KEY}_loaded_audio_example_id"] = example.id
+                        st.rerun()
+                    else:
+                        st.error(f"Example file not found: {selected_audio_id}")
         enable_tts = False
     else:
         enable_tts = True
         st.info("TTS requires a reference audio sample (5-15s, 16kHz+)")
 
-        tts_prompt_audio = st.file_uploader(
-            "TTS reference audio",
-            type=["wav", "mp3"],
-            help="5-15 second audio sample for voice cloning",
-        )
-        if tts_prompt_audio:
-            st.audio(tts_prompt_audio)
+        if audio_example_loaded:
+            # Show loaded example as TTS reference
+            example_path = st.session_state[f"{TASK_KEY}_loaded_audio_example_path"]
+            example_id = st.session_state[f"{TASK_KEY}_loaded_audio_example_id"]
+
+            st.success(f"Using example as TTS reference: `{example_id}`")
+            if example_path and Path(example_path).exists():
+                st.audio(str(example_path))
+
+            # Clear button
+            if st.button("Clear Example (Upload My Own)", key="clear_tts_audio_example", use_container_width=True):
+                st.session_state[f"{TASK_KEY}_audio_example_loaded"] = False
+                st.session_state[f"{TASK_KEY}_loaded_audio_example_path"] = None
+                st.session_state[f"{TASK_KEY}_loaded_audio_example_id"] = None
+                st.rerun()
+        else:
+            # Show file uploader
+            tts_prompt_audio = st.file_uploader(
+                "TTS reference audio",
+                type=["wav", "mp3"],
+                help="5-15 second audio sample for voice cloning",
+            )
+            if tts_prompt_audio:
+                st.audio(tts_prompt_audio)
+
+            # Show example selector
+            st.divider()
+            st.write("**OR select an example audio:**")
+
+            # Display radio grid
+            selected_tts_audio_id = example_library.display_radio_grid(
+                task=TASK,
+                media_type="audio",
+                columns=2,
+                show_none_option=audio_example_loaded,
+                key_suffix="s2v_tts_audio"
+            )
+
+            # Load button
+            if selected_tts_audio_id is not None:
+                if st.button("Load Selected Example", key="load_tts_audio_example", type="primary", use_container_width=True):
+                    # Get example details
+                    example = example_library.get_example_by_id(selected_tts_audio_id)
+                    if example and example.path.exists():
+                        st.session_state[f"{TASK_KEY}_audio_example_loaded"] = True
+                        st.session_state[f"{TASK_KEY}_loaded_audio_example_path"] = example.path
+                        st.session_state[f"{TASK_KEY}_loaded_audio_example_id"] = example.id
+                        st.rerun()
+                    else:
+                        st.error(f"Example file not found: {selected_tts_audio_id}")
 
         tts_prompt_text = st.text_input(
             "Reference audio text",
@@ -165,13 +327,59 @@ with col2:
 # Optional pose video
 with st.expander("Advanced: Pose-driven generation"):
     st.markdown("Optionally provide a pose video to control head movement and gestures")
-    pose_video = st.file_uploader(
-        "Upload pose video (optional)",
-        type=["mp4", "avi", "mov"],
-        help="DW-Pose sequence for pose-driven generation",
-    )
-    if pose_video:
-        st.video(pose_video)
+
+    pose_example_loaded = st.session_state.get(f"{TASK_KEY}_pose_example_loaded", False)
+
+    if pose_example_loaded:
+        # Show loaded example
+        example_path = st.session_state[f"{TASK_KEY}_loaded_pose_example_path"]
+        example_id = st.session_state[f"{TASK_KEY}_loaded_pose_example_id"]
+
+        st.success(f"Using example: `{example_id}`")
+        if example_path and Path(example_path).exists():
+            st.video(str(example_path))
+
+        # Clear button
+        if st.button("Clear Example (Upload My Own)", key="clear_pose_example", use_container_width=True):
+            st.session_state[f"{TASK_KEY}_pose_example_loaded"] = False
+            st.session_state[f"{TASK_KEY}_loaded_pose_example_path"] = None
+            st.session_state[f"{TASK_KEY}_loaded_pose_example_id"] = None
+            st.rerun()
+    else:
+        # Show file uploader
+        pose_video = st.file_uploader(
+            "Upload pose video (optional)",
+            type=["mp4", "avi", "mov"],
+            help="DW-Pose sequence for pose-driven generation",
+        )
+        if pose_video:
+            st.video(pose_video)
+
+        # Show example selector
+        st.divider()
+        st.write("**OR select an example pose video:**")
+
+        # Display radio grid
+        selected_pose_id = example_library.display_radio_grid(
+            task=TASK,
+            media_type="video",
+            columns=1,
+            show_none_option=pose_example_loaded,
+            key_suffix="s2v_pose"
+        )
+
+        # Load button
+        if selected_pose_id is not None:
+            if st.button("Load Selected Example", key="load_pose_example", type="primary", use_container_width=True):
+                # Get example details
+                example = example_library.get_example_by_id(selected_pose_id)
+                if example and example.path.exists():
+                    st.session_state[f"{TASK_KEY}_pose_example_loaded"] = True
+                    st.session_state[f"{TASK_KEY}_loaded_pose_example_path"] = example.path
+                    st.session_state[f"{TASK_KEY}_loaded_pose_example_id"] = example.id
+                    st.rerun()
+                else:
+                    st.error(f"Example file not found: {selected_pose_id}")
 
 # Project name
 st.subheader("Project")
@@ -246,17 +454,22 @@ st.divider()
 can_generate = True
 error_messages = []
 
-if not uploaded_image:
+# Check for reference image (uploaded or example)
+image_example_loaded = st.session_state.get(f"{TASK_KEY}_image_example_loaded", False)
+if not uploaded_image and not image_example_loaded:
     can_generate = False
-    error_messages.append("Please upload a reference image")
+    error_messages.append("Please upload a reference image or select an example")
 
-if audio_mode == "Upload audio file" and not uploaded_audio:
-    can_generate = False
-    error_messages.append("Please upload an audio file")
-elif audio_mode == "Text-to-Speech (TTS)":
-    if not tts_prompt_audio:
+# Check for audio (uploaded or example)
+audio_example_loaded = st.session_state.get(f"{TASK_KEY}_audio_example_loaded", False)
+if audio_mode == "Upload audio file":
+    if not uploaded_audio and not audio_example_loaded:
         can_generate = False
-        error_messages.append("Please upload TTS reference audio")
+        error_messages.append("Please upload an audio file or select an example")
+elif audio_mode == "Text-to-Speech (TTS)":
+    if not tts_prompt_audio and not audio_example_loaded:
+        can_generate = False
+        error_messages.append("Please upload TTS reference audio or select an example")
     if not tts_text:
         can_generate = False
         error_messages.append("Please enter text to synthesize")
@@ -284,23 +497,49 @@ else:
             input_dir = project_dir / "input"
             input_dir.mkdir(parents=True, exist_ok=True)
 
-            # Save uploaded files
-            image_path = save_uploaded_file(uploaded_image, input_dir / "image.jpg")
+            # Save or copy image (uploaded vs example)
+            if uploaded_image:
+                image_path = save_uploaded_file(uploaded_image, input_dir / "image.jpg")
+            else:
+                # Copy from example
+                example_image_path = Path(st.session_state[f"{TASK_KEY}_loaded_image_example_path"])
+                image_path = input_dir / "image.jpg"
+                shutil.copy(example_image_path, image_path)
 
             audio_path = None
             tts_audio_path = None
             if uploaded_audio:
                 audio_ext = Path(uploaded_audio.name).suffix
                 audio_path = save_uploaded_file(uploaded_audio, input_dir / f"audio{audio_ext}")
+            elif audio_example_loaded and not enable_tts:
+                # Copy from example for direct audio mode
+                example_audio_path = Path(st.session_state[f"{TASK_KEY}_loaded_audio_example_path"])
+                audio_ext = example_audio_path.suffix
+                audio_path = input_dir / f"audio{audio_ext}"
+                shutil.copy(example_audio_path, audio_path)
 
-            if enable_tts and tts_prompt_audio:
-                tts_ext = Path(tts_prompt_audio.name).suffix
-                tts_audio_path = save_uploaded_file(tts_prompt_audio, input_dir / f"tts_reference{tts_ext}")
+            if enable_tts:
+                if tts_prompt_audio:
+                    tts_ext = Path(tts_prompt_audio.name).suffix
+                    tts_audio_path = save_uploaded_file(tts_prompt_audio, input_dir / f"tts_reference{tts_ext}")
+                elif audio_example_loaded:
+                    # Copy from example for TTS reference
+                    example_audio_path = Path(st.session_state[f"{TASK_KEY}_loaded_audio_example_path"])
+                    tts_ext = example_audio_path.suffix
+                    tts_audio_path = input_dir / f"tts_reference{tts_ext}"
+                    shutil.copy(example_audio_path, tts_audio_path)
 
             pose_video_path = None
+            pose_example_loaded = st.session_state.get(f"{TASK_KEY}_pose_example_loaded", False)
             if pose_video:
                 pose_ext = Path(pose_video.name).suffix
                 pose_video_path = save_uploaded_file(pose_video, input_dir / f"pose{pose_ext}")
+            elif pose_example_loaded:
+                # Copy from example
+                example_pose_path = Path(st.session_state[f"{TASK_KEY}_loaded_pose_example_path"])
+                pose_ext = example_pose_path.suffix
+                pose_video_path = input_dir / f"pose{pose_ext}"
+                shutil.copy(example_pose_path, pose_video_path)
 
             # Generate output filename
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
