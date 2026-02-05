@@ -24,6 +24,7 @@ from utils.gpu import render_gpu_selector
 from utils.config import (
     DEFAULT_PROMPTS,
     MODEL_CONFIGS,
+    OUTPUT_PATH,
     OUTPUT_ROOT,
     PROMPT_EXTEND_METHOD,
     PROMPT_EXTEND_MODEL,
@@ -387,11 +388,11 @@ default_project_name = datetime.now().strftime("s2v_%Y%m%d_%H%M%S")
 project_name = st.text_input(
     "Project name",
     value=default_project_name,
-    help="All files will be saved in ./output/<project_name>/",
+    help=f"All files will be saved in {OUTPUT_PATH}/<project_name>/",
 )
 project_name = sanitize_project_name(project_name) or default_project_name
 project_dir = OUTPUT_ROOT / project_name
-st.caption(f"Output folder: `output/{project_name}`")
+st.caption(f"Output folder: `{OUTPUT_PATH}/{project_name}`")
 
 if project_dir.exists():
     existing_files = list(project_dir.glob("*"))
@@ -641,7 +642,7 @@ else:
 
         # Display result
         if final_output.exists():
-            st.success(f"Video generated successfully! Saved to `output/{project_name}`")
+            st.success(f"Video generated successfully! Saved to `{OUTPUT_PATH}/{project_name}`")
             st.video(str(final_output))
 
             # Show metadata summary
