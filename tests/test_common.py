@@ -18,8 +18,6 @@ def test_extract_thumbnail_success(tmp_path):
     video_path.write_text("dummy")
 
     with patch('subprocess.run') as mock_run:
-        mock_run.return_value = Mock(returncode=0)
-
         # Mock the output file creation
         def create_thumbnail(*args, **kwargs):
             output_path.write_text("thumbnail data")
@@ -79,7 +77,8 @@ def test_extract_thumbnail_custom_width(tmp_path):
 
         mock_run.side_effect = create_thumbnail
 
-        extract_thumbnail(video_path, output_path, width=1280)
+        result = extract_thumbnail(video_path, output_path, width=1280)
 
+        assert result is True
         args = mock_run.call_args[0][0]
         assert "scale=1280:-1" in args
