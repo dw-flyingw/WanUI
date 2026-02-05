@@ -29,7 +29,9 @@ from utils.config import (
     OUTPUT_ROOT,
     PROMPT_EXTEND_METHOD,
     PROMPT_EXTEND_MODEL,
+    calculate_frame_num,
     get_task_session_key,
+    render_duration_slider,
     render_example_prompts,
 )
 from utils.generation import run_generation, run_preprocessing
@@ -118,6 +120,12 @@ with st.sidebar:
     sample_solver = st.selectbox("Solver", ["unipc", "dpm++"], index=0)
 
     seed = st.number_input("Seed", min_value=-1, max_value=2147483647, value=-1, help="-1 for random")
+
+    st.divider()
+
+    # Duration control
+    st.subheader("Duration")
+    duration = render_duration_slider(TASK)
 
     st.divider()
 
@@ -353,6 +361,12 @@ if st.button("Generate Animation", type="primary", use_container_width=True):
             image_path = input_dir / "image.jpg"
             shutil.copy(example_image_path, image_path)
 
+        # Calculate frame_num from duration
+        if duration is not None:
+            frame_num = calculate_frame_num(duration, CONFIG["sample_fps"])
+        else:
+            frame_num = None  # Let preprocessing determine from source video
+
         # Handle audio based on user selection
         audio_path = None
         if audio_source == "From source video":
@@ -427,6 +441,7 @@ if st.button("Generate Animation", type="primary", use_container_width=True):
                 replace_flag=(mode == "replacement"),
                 refert_num=refert_num,
                 use_relighting_lora=use_relighting_lora,
+                frame_num=frame_num,
                 gpu_ids=gpu_ids,
             )
 
@@ -460,6 +475,8 @@ if st.button("Generate Animation", type="primary", use_container_width=True):
             output_video_length_seconds=video_info["duration"],
             output_video_file_size_bytes=video_info["file_size_bytes"],
             extended_prompt=st.session_state.get(f"{TASK_KEY}_extended_prompt"),
+            duration_seconds=duration,
+            frame_num=frame_num,
             source_video_path="input/video.mp4",
             source_image_path="input/image.jpg",
             source_audio_path=str(audio_path.relative_to(project_dir)) if audio_path else None,

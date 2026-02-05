@@ -181,6 +181,10 @@ class OutputHistory:
         st.caption(f"**Model:** {metadata.task}")
         st.caption(f"**Project:** {project_dir.name}")
 
+        # Show duration if available
+        if metadata.duration_seconds:
+            st.caption(f"**Duration:** {metadata.duration_seconds}s ({metadata.frame_num} frames)")
+
         # Expandable details
         with st.expander("View Details"):
             st.write("**Full Prompt:**")

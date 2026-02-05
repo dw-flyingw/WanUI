@@ -41,6 +41,10 @@ class GenerationMetadata:
     sample_solver: str = "unipc"
     seed: int = -1
 
+    # Duration (for tasks with duration control)
+    duration_seconds: float | None = None
+    frame_num: int | None = None
+
     # Timing
     preprocessing_time_seconds: float | None = None
     generation_time_seconds: float = 0.0
@@ -94,6 +98,8 @@ def create_metadata(
     source_audio_path: str | None = None,
     pose_video_path: str | None = None,
     preprocessing_time_seconds: float | None = None,
+    duration_seconds: float | None = None,
+    frame_num: int | None = None,
     extra_settings: dict | None = None,
 ) -> GenerationMetadata:
     """Create a GenerationMetadata instance with calculated timing."""
@@ -121,6 +127,8 @@ def create_metadata(
         sample_guide_scale=sample_guide_scale,
         sample_solver=sample_solver,
         seed=seed,
+        duration_seconds=duration_seconds,
+        frame_num=frame_num,
         preprocessing_time_seconds=preprocessing_time_seconds,
         generation_time_seconds=generation_time,
         total_time_seconds=total_time,

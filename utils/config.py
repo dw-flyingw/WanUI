@@ -56,6 +56,8 @@ MODEL_CONFIGS = {
         "requires_video": False,
         "requires_audio": False,
         "requires_preprocessing": False,
+        "duration_range": {"min": 5, "max": 10, "step": 1, "default": 5},
+        "supports_duration_control": True,
     },
     "i2v-A14B": {
         "task": "i2v-A14B",
@@ -74,6 +76,8 @@ MODEL_CONFIGS = {
         "requires_video": False,
         "requires_audio": False,
         "requires_preprocessing": False,
+        "duration_range": {"min": 5, "max": 10, "step": 1, "default": 5},
+        "supports_duration_control": True,
     },
     "ti2v-5B": {
         "task": "ti2v-5B",
@@ -93,6 +97,8 @@ MODEL_CONFIGS = {
         "requires_audio": False,
         "requires_preprocessing": False,
         "supports_both_t2v_i2v": True,
+        "duration_range": {"min": 2, "max": 5, "step": 0.5, "default": 2},
+        "supports_duration_control": True,
     },
     "s2v-14B": {
         "task": "s2v-14B",
@@ -114,6 +120,7 @@ MODEL_CONFIGS = {
         "requires_preprocessing": False,
         "supports_tts": True,
         "supports_pose_video": True,
+        "supports_duration_control": False,  # Audio-driven, duration determined by audio
     },
     "animate-14B": {
         "task": "animate-14B",
@@ -133,6 +140,8 @@ MODEL_CONFIGS = {
         "requires_video": True,
         "requires_audio": False,  # Optional
         "requires_preprocessing": True,
+        "duration_range": {"min": 2, "max": 5, "step": 0.5, "default": 2.5},
+        "supports_duration_control": True,
     },
 }
 
@@ -207,6 +216,12 @@ def init_session_state():
             st.session_state[f"{task_key}_last_output"] = None
             st.session_state[f"{task_key}_last_metadata"] = None
 
+            # Add duration state for tasks that support it
+            config = MODEL_CONFIGS[task]
+            if config.get("supports_duration_control", False):
+                duration_range = config["duration_range"]
+                st.session_state[f"{task_key}_duration"] = float(duration_range["default"])
+
 
 def get_task_session_key(task: str) -> str:
     """Convert task name to session state key format."""
@@ -264,3 +279,75 @@ def render_example_prompts(task: str, prompt_key: str = "prompt"):
                 # Store the example prompt to fill the text area
                 st.session_state[f"{task.replace('-', '_')}_example_clicked"] = example
                 st.rerun()
+
+
+def calculate_frame_num(duration_seconds: float, fps: int) -> int:
+    """
+    Calculate frame count from duration and fps, with rounding.
+
+    Args:
+        duration_seconds: Desired duration in seconds
+        fps: Frames per second
+
+    Returns:
+        Rounded frame count
+
+    Example:
+        >>> calculate_frame_num(5.0, 16)
+        80
+        >>> calculate_frame_num(6.0, 16)
+        96
+    """
+    return round(duration_seconds * fps)
+
+
+def render_duration_slider(task: str) -> float | None:
+    """
+    Render duration slider for tasks that support it.
+
+    Args:
+        task: Task name (e.g., "t2v-A14B")
+
+    Returns:
+        Selected duration in seconds, or None if not supported
+
+    Example:
+        >>> duration = render_duration_slider("t2v-A14B")
+        # Renders slider, returns selected value (5.0-10.0)
+    """
+    config = MODEL_CONFIGS[task]
+
+    if not config.get("supports_duration_control", False):
+        return None
+
+    duration_range = config["duration_range"]
+
+    # Create columns for label and info icon
+    col1, col2 = st.columns([0.95, 0.05])
+
+    with col1:
+        st.markdown("**Duration**")
+    with col2:
+        st.markdown(
+            "ℹ️",
+            help="Longer videos require more GPU memory and generation time. "
+                 "10 seconds may require 80GB+ VRAM."
+        )
+
+    # Render slider
+    duration = st.slider(
+        "Duration (seconds)",
+        min_value=float(duration_range["min"]),
+        max_value=float(duration_range["max"]),
+        value=float(duration_range["default"]),
+        step=float(duration_range["step"]),
+        key=f"{task.replace('-', '_')}_duration",
+        label_visibility="collapsed"
+    )
+
+    # Show calculated frame count
+    fps = config["sample_fps"]
+    frame_count = calculate_frame_num(duration, fps)
+    st.caption(f"→ {frame_count} frames @ {fps} fps")
+
+    return duration
