@@ -51,6 +51,57 @@ def extract_audio_from_video(video_path: Path, output_path: Path) -> tuple[bool,
         return False, f"Audio extraction error: {str(e)}"
 
 
+def extract_thumbnail(video_path: Path, output_path: Path, width: int = 640) -> bool:
+    """
+    Extract first frame from video as thumbnail using ffmpeg.
+
+    Args:
+        video_path: Path to source video file
+        output_path: Path to save thumbnail JPEG
+        width: Thumbnail width in pixels (maintains aspect ratio)
+
+    Returns:
+        True if thumbnail extracted successfully, False otherwise
+    """
+    if not video_path.exists():
+        return False
+
+    try:
+        # Create output directory if needed
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Extract frame at 0.1s to avoid black frames
+        result = subprocess.run(
+            [
+                "ffmpeg",
+                "-y",  # overwrite
+                "-ss", "0.1",  # seek to 0.1s
+                "-i", str(video_path),
+                "-vframes", "1",  # extract 1 frame
+                "-vf", f"scale={width}:-1",  # scale width, maintain aspect ratio
+                "-q:v", "2",  # quality 2 (85% JPEG quality)
+                str(output_path),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+
+        if result.returncode != 0:
+            return False
+
+        # Verify output file exists and has content
+        if output_path.exists() and output_path.stat().st_size > 0:
+            return True
+
+        return False
+
+    except subprocess.TimeoutExpired:
+        return False
+    except Exception:
+        return False
+
+
 def get_video_info(video_path: Path) -> dict:
     """Get video information including duration, fps, and dimensions."""
     info = {
