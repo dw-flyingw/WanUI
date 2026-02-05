@@ -441,6 +441,7 @@ if st.button("Generate Animation", type="primary", use_container_width=True):
                 replace_flag=(mode == "replacement"),
                 refert_num=refert_num,
                 use_relighting_lora=use_relighting_lora,
+                frame_num=frame_num,
                 gpu_ids=gpu_ids,
             )
 
