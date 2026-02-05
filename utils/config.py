@@ -273,3 +273,23 @@ def render_example_prompts(task: str, prompt_key: str = "prompt"):
                 # Store the example prompt to fill the text area
                 st.session_state[f"{task.replace('-', '_')}_example_clicked"] = example
                 st.rerun()
+
+
+def calculate_frame_num(duration_seconds: float, fps: int) -> int:
+    """
+    Calculate frame count from duration and fps, with rounding.
+
+    Args:
+        duration_seconds: Desired duration in seconds
+        fps: Frames per second
+
+    Returns:
+        Rounded frame count
+
+    Example:
+        >>> calculate_frame_num(5.0, 16)
+        80
+        >>> calculate_frame_num(6.0, 16)
+        96
+    """
+    return round(duration_seconds * fps)
