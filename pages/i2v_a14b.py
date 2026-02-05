@@ -201,13 +201,15 @@ st.subheader("Prompts")
 if f"{TASK_KEY}_example_clicked" in st.session_state:
     example_text = st.session_state[f"{TASK_KEY}_example_clicked"]
     del st.session_state[f"{TASK_KEY}_example_clicked"]
-    default_prompt = example_text
-else:
-    default_prompt = DEFAULT_PROMPTS[TASK]
+    # Update the text area's session state value directly
+    st.session_state[f"{TASK_KEY}_prompt_input"] = example_text
+
+# Get the default prompt if the key doesn't exist yet
+if f"{TASK_KEY}_prompt_input" not in st.session_state:
+    st.session_state[f"{TASK_KEY}_prompt_input"] = DEFAULT_PROMPTS[TASK]
 
 prompt = st.text_area(
     "Your Prompt (optional)",
-    value=default_prompt,
     height=120,
     help="Describe how you want the image to animate. Leave empty to let the model decide.",
     key=f"{TASK_KEY}_prompt_input",
@@ -219,9 +221,7 @@ render_example_prompts(TASK)
 st.divider()
 
 # Prompt extension button
-col1, col2 = st.columns([1, 4])
-with col1:
-    extend_clicked = st.button("Extend Prompt", disabled=not PROMPT_EXTEND_MODEL)
+extend_clicked = st.button("Extend Prompt", disabled=not PROMPT_EXTEND_MODEL, use_container_width=True)
 
 if extend_clicked:
     with st.spinner("Extending prompt..."):
@@ -236,11 +236,11 @@ if extend_clicked:
 # Show extended prompt if available
 if st.session_state.get(f"{TASK_KEY}_extended_prompt"):
     with st.expander("Extended Prompt (from LLM)", expanded=True):
-        st.text_area(
+        st.session_state[f"{TASK_KEY}_extended_prompt"] = st.text_area(
             "Extended",
             value=st.session_state[f"{TASK_KEY}_extended_prompt"],
             height=150,
-            disabled=True,
+            key=f"{TASK_KEY}_extended_prompt_input",
             label_visibility="collapsed",
         )
 

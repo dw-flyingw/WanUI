@@ -99,7 +99,7 @@ with st.sidebar:
     use_relighting_lora = False
 
     # GPU selection with usage visualization
-    num_gpus = render_gpu_selector(default_value=1)
+    num_gpus, gpu_ids = render_gpu_selector(default_value=1)
 
     st.divider()
 
@@ -121,6 +121,10 @@ with st.sidebar:
     st.divider()
 
 # Prompt extension available via button in main area
+
+# Initialize media source variables
+uploaded_video = None
+uploaded_image = None
 
 # Main content - Media inputs
 col1, col2 = st.columns(2)
@@ -285,9 +289,7 @@ prompt = st.text_area(
 )
 
 # Prompt extension button
-col1, col2 = st.columns([1, 4])
-with col1:
-    extend_clicked = st.button("Extend Prompt", disabled=not PROMPT_EXTEND_MODEL)
+extend_clicked = st.button("Extend Prompt", disabled=not PROMPT_EXTEND_MODEL, use_container_width=True)
 
 if extend_clicked:
     with st.spinner("Extending prompt..."):
@@ -301,11 +303,11 @@ if extend_clicked:
 # Show extended prompt if available
 if st.session_state.get(f"{TASK_KEY}_extended_prompt"):
     with st.expander("Extended Prompt (from LLM)", expanded=True):
-        st.text_area(
+        st.session_state[f"{TASK_KEY}_extended_prompt"] = st.text_area(
             "Extended",
             value=st.session_state[f"{TASK_KEY}_extended_prompt"],
             height=150,
-            disabled=True,
+            key=f"{TASK_KEY}_extended_prompt_input",
             label_visibility="collapsed",
         )
 
@@ -424,6 +426,7 @@ if st.button("Generate Animation", type="primary", use_container_width=True):
                 replace_flag=(mode == "replacement"),
                 refert_num=refert_num,
                 use_relighting_lora=use_relighting_lora,
+                gpu_ids=gpu_ids,
             )
 
             if not success:
