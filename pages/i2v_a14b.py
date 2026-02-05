@@ -28,7 +28,9 @@ from utils.config import (
     OUTPUT_ROOT,
     PROMPT_EXTEND_METHOD,
     PROMPT_EXTEND_MODEL,
+    calculate_frame_num,
     get_task_session_key,
+    render_duration_slider,
     render_example_prompts,
 )
 from utils.generation import run_generation
@@ -68,7 +70,6 @@ if f"{TASK_KEY}_loaded_example_id" not in st.session_state:
 
 # Auto-select optimal defaults
 resolution = CONFIG["default_size"]
-frame_num = CONFIG["frame_num"]
 
 # Sidebar configuration
 with st.sidebar:
@@ -114,6 +115,12 @@ with st.sidebar:
     sample_solver = st.selectbox("Solver", ["unipc", "dpm++"], index=0)
 
     seed = st.number_input("Seed", min_value=-1, max_value=2147483647, value=-1, help="-1 for random")
+
+    st.divider()
+
+    # Duration control
+    st.subheader("Duration")
+    duration = render_duration_slider(TASK)
 
     st.divider()
 
@@ -313,6 +320,12 @@ else:
         # Use extended prompt if available
         generation_prompt = st.session_state.get(f"{TASK_KEY}_extended_prompt") or prompt
 
+        # Calculate frame_num from duration
+        if duration is not None:
+            frame_num = calculate_frame_num(duration, CONFIG["sample_fps"])
+        else:
+            frame_num = CONFIG["frame_num"]
+
         # Cancellation check function
         def check_cancellation():
             return st.session_state.get(f"{TASK_KEY}_cancel_requested", False)
@@ -380,6 +393,8 @@ else:
             output_video_length_seconds=video_info["duration"],
             output_video_file_size_bytes=video_info["file_size_bytes"],
             extended_prompt=st.session_state.get(f"{TASK_KEY}_extended_prompt"),
+            duration_seconds=duration,
+            frame_num=frame_num,
             source_image_path="input/image.jpg",
             extra_settings={
                 "frame_num": frame_num,
