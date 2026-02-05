@@ -293,3 +293,55 @@ def calculate_frame_num(duration_seconds: float, fps: int) -> int:
         96
     """
     return round(duration_seconds * fps)
+
+
+def render_duration_slider(task: str) -> float | None:
+    """
+    Render duration slider for tasks that support it.
+
+    Args:
+        task: Task name (e.g., "t2v-A14B")
+
+    Returns:
+        Selected duration in seconds, or None if not supported
+
+    Example:
+        >>> duration = render_duration_slider("t2v-A14B")
+        # Renders slider, returns selected value (5.0-10.0)
+    """
+    config = MODEL_CONFIGS[task]
+
+    if not config.get("supports_duration_control", False):
+        return None
+
+    duration_range = config["duration_range"]
+
+    # Create columns for label and info icon
+    col1, col2 = st.columns([0.95, 0.05])
+
+    with col1:
+        st.markdown("**Duration**")
+    with col2:
+        st.markdown(
+            "ℹ️",
+            help="Longer videos require more GPU memory and generation time. "
+                 "10 seconds may require 80GB+ VRAM."
+        )
+
+    # Render slider
+    duration = st.slider(
+        "Duration (seconds)",
+        min_value=float(duration_range["min"]),
+        max_value=float(duration_range["max"]),
+        value=float(duration_range["default"]),
+        step=float(duration_range["step"]),
+        key=f"{task.replace('-', '_')}_duration",
+        label_visibility="collapsed"
+    )
+
+    # Show calculated frame count
+    fps = config["sample_fps"]
+    frame_count = calculate_frame_num(duration, fps)
+    st.caption(f"→ {frame_count} frames @ {fps} fps")
+
+    return duration
