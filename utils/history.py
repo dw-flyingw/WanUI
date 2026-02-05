@@ -36,7 +36,7 @@ class OutputHistory:
         Returns:
             List of tuples (project_dir, metadata) sorted by timestamp (newest first)
         """
-        projects = []
+        projects: List[Tuple[Path, GenerationMetadata]] = []
 
         if not self.output_root.exists():
             return projects
@@ -58,10 +58,7 @@ class OutputHistory:
                 continue
 
         # Sort by timestamp (newest first)
-        projects.sort(
-            key=lambda x: x[1].timestamp,
-            reverse=True
-        )
+        projects.sort(key=lambda x: x[1].timestamp, reverse=True)
 
         return projects
 
@@ -95,14 +92,14 @@ class OutputHistory:
 
         if date_from:
             filtered = [
-                p for p in filtered
+                p
+                for p in filtered
                 if datetime.fromisoformat(p[1].timestamp) >= date_from
             ]
 
         if date_to:
             filtered = [
-                p for p in filtered
-                if datetime.fromisoformat(p[1].timestamp) <= date_to
+                p for p in filtered if datetime.fromisoformat(p[1].timestamp) <= date_to
             ]
 
         if resolution:
@@ -111,9 +108,13 @@ class OutputHistory:
         if search_text:
             search_lower = search_text.lower()
             filtered = [
-                p for p in filtered
+                p
+                for p in filtered
                 if search_lower in p[1].user_prompt.lower()
-                or (p[1].extended_prompt and search_lower in p[1].extended_prompt.lower())
+                or (
+                    p[1].extended_prompt
+                    and search_lower in p[1].extended_prompt.lower()
+                )
             ]
 
         return filtered
@@ -132,9 +133,7 @@ class OutputHistory:
         return projects[:limit]
 
     def display_gallery_grid(
-        self,
-        projects: List[Tuple[Path, GenerationMetadata]],
-        columns: int = 3
+        self, projects: List[Tuple[Path, GenerationMetadata]], columns: int = 3
     ):
         """
         Display projects in a grid view.
@@ -197,8 +196,12 @@ class OutputHistory:
             if video_key not in st.session_state:
                 st.session_state[video_key] = False
 
-            button_label = "⏸ Hide Video" if st.session_state[video_key] else "▶ Play Video"
-            if st.button(button_label, key=f"play_{project_dir.name}", use_container_width=True):
+            button_label = (
+                "⏸ Hide Video" if st.session_state[video_key] else "▶ Play Video"
+            )
+            if st.button(
+                button_label, key=f"play_{project_dir.name}", use_container_width=True
+            ):
                 st.session_state[video_key] = not st.session_state[video_key]
 
             # Show video player if expanded
@@ -214,7 +217,9 @@ class OutputHistory:
 
         # Show duration if available
         if metadata.duration_seconds:
-            st.caption(f"**Duration:** {metadata.duration_seconds}s ({metadata.frame_num} frames)")
+            st.caption(
+                f"**Duration:** {metadata.duration_seconds}s ({metadata.frame_num} frames)"
+            )
 
         # Expandable details
         self._render_details_expander(project_dir, metadata)
@@ -236,28 +241,34 @@ class OutputHistory:
                 st.write(metadata.extended_prompt)
 
             st.write("**Settings:**")
-            st.json({
-                "Model": metadata.model_checkpoint.split("/")[-1],
-                "Steps": metadata.sample_steps,
-                "Shift": metadata.sample_shift,
-                "Guide Scale": metadata.sample_guide_scale,
-                "Solver": metadata.sample_solver,
-                "Seed": metadata.seed,
-                "GPUs": metadata.num_gpus,
-            })
+            st.json(
+                {
+                    "Model": metadata.model_checkpoint.split("/")[-1],
+                    "Steps": metadata.sample_steps,
+                    "Shift": metadata.sample_shift,
+                    "Guide Scale": metadata.sample_guide_scale,
+                    "Solver": metadata.sample_solver,
+                    "Seed": metadata.seed,
+                    "GPUs": metadata.num_gpus,
+                }
+            )
 
             st.write("**Timing:**")
-            st.json({
-                "Generation Time": f"{metadata.generation_time_seconds:.1f}s",
-                "Total Time": f"{metadata.total_time_seconds:.1f}s",
-            })
+            st.json(
+                {
+                    "Generation Time": f"{metadata.generation_time_seconds:.1f}s",
+                    "Total Time": f"{metadata.total_time_seconds:.1f}s",
+                }
+            )
 
             st.write("**Output:**")
-            st.json({
-                "File Size": f"{metadata.output_video_file_size_bytes / 1024 / 1024:.2f} MB",
-                "Duration": f"{metadata.output_video_length_seconds:.1f}s",
-                "Project": project_dir.name,
-            })
+            st.json(
+                {
+                    "File Size": f"{metadata.output_video_file_size_bytes / 1024 / 1024:.2f} MB",
+                    "Duration": f"{metadata.output_video_length_seconds:.1f}s",
+                    "Project": project_dir.name,
+                }
+            )
 
             # Source files
             if metadata.source_image_path:
@@ -281,9 +292,9 @@ class OutputHistory:
             with col1:
                 # Create zip file in memory
                 zip_buffer = io.BytesIO()
-                with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
                     # Add all files from project directory
-                    for file_path in project_dir.rglob('*'):
+                    for file_path in project_dir.rglob("*"):
                         if file_path.is_file():
                             arcname = file_path.relative_to(project_dir)
                             zip_file.write(file_path, arcname)
@@ -299,7 +310,12 @@ class OutputHistory:
                 )
 
             with col2:
-                if st.button("🗑️ Remove Project", type="secondary", use_container_width=True, key=f"remove_{project_dir.name}"):
+                if st.button(
+                    "🗑️ Remove Project",
+                    type="secondary",
+                    use_container_width=True,
+                    key=f"remove_{project_dir.name}",
+                ):
                     try:
                         shutil.rmtree(project_dir)
                         st.rerun()

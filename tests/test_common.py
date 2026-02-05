@@ -17,7 +17,7 @@ def test_extract_thumbnail_success(tmp_path):
     # Create dummy video file
     video_path.write_text("dummy")
 
-    with patch('subprocess.run') as mock_run:
+    with patch("subprocess.run") as mock_run:
         # Mock the output file creation
         def create_thumbnail(*args, **kwargs):
             output_path.write_text("thumbnail data")
@@ -44,7 +44,7 @@ def test_extract_thumbnail_failure(tmp_path):
 
     video_path.write_text("dummy")
 
-    with patch('subprocess.run') as mock_run:
+    with patch("subprocess.run") as mock_run:
         mock_run.return_value = Mock(returncode=1, stderr="error")
 
         result = extract_thumbnail(video_path, output_path)
@@ -69,7 +69,7 @@ def test_extract_thumbnail_custom_width(tmp_path):
 
     video_path.write_text("dummy")
 
-    with patch('subprocess.run') as mock_run:
+    with patch("subprocess.run") as mock_run:
         # Mock the output file creation
         def create_thumbnail(*args, **kwargs):
             output_path.write_text("thumbnail data")

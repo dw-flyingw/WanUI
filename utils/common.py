@@ -75,11 +75,16 @@ def extract_thumbnail(video_path: Path, output_path: Path, width: int = 640) -> 
             [
                 "ffmpeg",
                 "-y",  # overwrite
-                "-ss", "0.1",  # seek to 0.1s
-                "-i", str(video_path),
-                "-vframes", "1",  # extract 1 frame
-                "-vf", f"scale={width}:-1",  # scale width, maintain aspect ratio
-                "-q:v", "2",  # quality 2 (85% JPEG quality)
+                "-ss",
+                "0.1",  # seek to 0.1s
+                "-i",
+                str(video_path),
+                "-vframes",
+                "1",  # extract 1 frame
+                "-vf",
+                f"scale={width}:-1",  # scale width, maintain aspect ratio
+                "-q:v",
+                "2",  # quality 2 (85% JPEG quality)
                 str(output_path),
             ],
             capture_output=True,
@@ -175,11 +180,12 @@ def get_video_info(video_path: Path) -> dict:
 
 def format_file_size(size_bytes: int) -> str:
     """Format file size in human-readable format."""
+    size: float = float(size_bytes)
     for unit in ["B", "KB", "MB", "GB"]:
-        if size_bytes < 1024:
-            return f"{size_bytes:.1f} {unit}"
-        size_bytes /= 1024
-    return f"{size_bytes:.1f} TB"
+        if size < 1024:
+            return f"{size:.1f} {unit}"
+        size /= 1024
+    return f"{size:.1f} TB"
 
 
 def format_duration(seconds: float) -> str:

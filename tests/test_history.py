@@ -38,13 +38,19 @@ def mock_metadata():
     )
 
 
-@patch('utils.history.OutputHistory._render_details_expander')
-@patch('streamlit.image')
-@patch('streamlit.button')
-@patch('streamlit.video')
-@patch('utils.history.extract_thumbnail')
+@patch("utils.history.OutputHistory._render_details_expander")
+@patch("streamlit.image")
+@patch("streamlit.button")
+@patch("streamlit.video")
+@patch("utils.history.extract_thumbnail")
 def test_render_project_card_with_cached_thumbnail(
-    mock_extract, mock_video, mock_button, mock_image, mock_render_details, tmp_path, mock_metadata
+    mock_extract,
+    mock_video,
+    mock_button,
+    mock_image,
+    mock_render_details,
+    tmp_path,
+    mock_metadata,
 ):
     """Test card rendering uses cached thumbnail when available."""
     # Setup
@@ -69,13 +75,19 @@ def test_render_project_card_with_cached_thumbnail(
     mock_video.assert_not_called()  # Video not expanded
 
 
-@patch('utils.history.OutputHistory._render_details_expander')
-@patch('streamlit.image')
-@patch('streamlit.button')
-@patch('streamlit.video')
-@patch('utils.history.extract_thumbnail')
+@patch("utils.history.OutputHistory._render_details_expander")
+@patch("streamlit.image")
+@patch("streamlit.button")
+@patch("streamlit.video")
+@patch("utils.history.extract_thumbnail")
 def test_render_project_card_generates_thumbnail(
-    mock_extract, mock_video, mock_button, mock_image, mock_render_details, tmp_path, mock_metadata
+    mock_extract,
+    mock_video,
+    mock_button,
+    mock_image,
+    mock_render_details,
+    tmp_path,
+    mock_metadata,
 ):
     """Test card rendering generates thumbnail when missing."""
     # Setup
@@ -98,14 +110,21 @@ def test_render_project_card_generates_thumbnail(
     mock_image.assert_called_once()
 
 
-@patch('utils.history.OutputHistory._render_details_expander')
-@patch('streamlit.image')
-@patch('streamlit.button')
-@patch('streamlit.video')
-@patch('streamlit.warning')
-@patch('utils.history.extract_thumbnail')
+@patch("utils.history.OutputHistory._render_details_expander")
+@patch("streamlit.image")
+@patch("streamlit.button")
+@patch("streamlit.video")
+@patch("streamlit.warning")
+@patch("utils.history.extract_thumbnail")
 def test_render_project_card_thumbnail_generation_fails(
-    mock_extract, mock_warning, mock_video, mock_button, mock_image, mock_render_details, tmp_path, mock_metadata
+    mock_extract,
+    mock_warning,
+    mock_video,
+    mock_button,
+    mock_image,
+    mock_render_details,
+    tmp_path,
+    mock_metadata,
 ):
     """Test card rendering falls back gracefully when thumbnail fails."""
     # Setup
@@ -127,14 +146,21 @@ def test_render_project_card_thumbnail_generation_fails(
     mock_image.assert_not_called()
 
 
-@patch('utils.history.OutputHistory._render_details_expander')
-@patch('streamlit.image')
-@patch('streamlit.button')
-@patch('streamlit.video')
-@patch('streamlit.session_state', new_callable=dict)
-@patch('utils.history.extract_thumbnail')
+@patch("utils.history.OutputHistory._render_details_expander")
+@patch("streamlit.image")
+@patch("streamlit.button")
+@patch("streamlit.video")
+@patch("streamlit.session_state", new_callable=dict)
+@patch("utils.history.extract_thumbnail")
 def test_render_project_card_expands_video_on_click(
-    mock_extract, mock_state, mock_video, mock_button, mock_image, mock_render_details, tmp_path, mock_metadata
+    mock_extract,
+    mock_state,
+    mock_video,
+    mock_button,
+    mock_image,
+    mock_render_details,
+    tmp_path,
+    mock_metadata,
 ):
     """Test video player appears when play button clicked."""
     # Setup
