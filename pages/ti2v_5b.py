@@ -28,7 +28,9 @@ from utils.config import (
     OUTPUT_ROOT,
     PROMPT_EXTEND_METHOD,
     PROMPT_EXTEND_MODEL,
+    calculate_frame_num,
     get_task_session_key,
+    render_duration_slider,
     render_example_prompts,
 )
 from utils.generation import run_generation
@@ -127,6 +129,12 @@ with st.sidebar:
     sample_solver = st.selectbox("Solver", ["unipc", "dpm++"], index=0)
 
     seed = st.number_input("Seed", min_value=-1, max_value=2147483647, value=-1, help="-1 for random")
+
+    st.divider()
+
+    # Duration control
+    st.subheader("Duration")
+    duration = render_duration_slider(TASK)
 
     st.divider()
 
@@ -334,6 +342,12 @@ else:
             # Use extended prompt if available
             generation_prompt = st.session_state.get(f"{TASK_KEY}_extended_prompt") or prompt
 
+            # Calculate frame_num from duration
+            if duration is not None:
+                frame_num = calculate_frame_num(duration, CONFIG["sample_fps"])
+            else:
+                frame_num = CONFIG["frame_num"]
+
             # Cancellation check function
             def check_cancellation():
                 return st.session_state.get(f"{TASK_KEY}_cancel_requested", False)
@@ -341,7 +355,7 @@ else:
             with st.status("Generating video...", expanded=True) as status:
                 st.write(f"Mode: {mode}")
                 st.write(f"Running on {num_gpus} GPU(s)...")
-                st.write(f"Resolution: {resolution}, Frames: {CONFIG['frame_num']} @ {CONFIG['sample_fps']} fps")
+                st.write(f"Resolution: {resolution}, Frames: {frame_num} @ {CONFIG['sample_fps']} fps")
                 st.write(f"Prompt: {generation_prompt[:100]}...")
 
                 success, output, generation_time = run_generation(
@@ -355,7 +369,7 @@ else:
                     sample_shift=sample_shift,
                     sample_guide_scale=sample_guide_scale,
                     seed=seed,
-                    frame_num=CONFIG["frame_num"],
+                    frame_num=frame_num,
                     gpu_ids=gpu_ids,
                     use_prompt_extend=False,  # Already extended in UI
                     image_path=image_path,
@@ -399,9 +413,11 @@ else:
                 output_video_length_seconds=video_info["duration"],
                 output_video_file_size_bytes=video_info["file_size_bytes"],
                 extended_prompt=st.session_state.get(f"{TASK_KEY}_extended_prompt"),
+                duration_seconds=duration,
+                frame_num=frame_num,
                 source_image_path=str(image_path.relative_to(project_dir)) if image_path else None,
                 extra_settings={
-                    "frame_num": CONFIG["frame_num"],
+                    "frame_num": frame_num,
                     "sample_fps": CONFIG["sample_fps"],
                     "mode": mode,
                     "source_type": "example" if (mode == "Image + Text (I2V)" and st.session_state.get(f"{TASK_KEY}_example_loaded", False)) else "upload" if mode == "Image + Text (I2V)" else "text_only",
@@ -431,7 +447,7 @@ else:
                     st.write(f"**Mode:** {mode}")
                     st.write(f"**GPUs Used:** {num_gpus}")
                     st.write(f"**Resolution:** {resolution}")
-                    st.write(f"**Frames:** {CONFIG['frame_num']} @ {CONFIG['sample_fps']} fps")
+                    st.write(f"**Frames:** {frame_num} @ {CONFIG['sample_fps']} fps")
 
                 # Show project contents
                 with st.expander("Project files"):
