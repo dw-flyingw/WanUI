@@ -2,6 +2,7 @@
 Common utility functions shared across all pages.
 """
 
+import subprocess
 from pathlib import Path
 
 

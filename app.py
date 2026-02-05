@@ -46,8 +46,8 @@ home_page = st.Page("pages/home.py", title="Home", default=True)
 t2v_page = st.Page("pages/t2v_a14b.py", title="Text to Video")
 i2v_page = st.Page("pages/i2v_a14b.py", title="Image to Video")
 ti2v_page = st.Page("pages/ti2v_5b.py", title="Fast T2V/I2V")
-s2v_page = st.Page("pages/s2v_14b.py", title="Speech to Video")
 animate_page = st.Page("pages/animate_14b.py", title="Animate")
+s2v_page = st.Page("pages/s2v_14b.py", title="Speech to Video")
 
 # Utility pages
 gallery_page = st.Page("pages/gallery.py", title="Gallery")
@@ -56,7 +56,7 @@ gallery_page = st.Page("pages/gallery.py", title="Gallery")
 pg = st.navigation(
     {
         "Overview": [home_page, gallery_page],
-        "Models": [t2v_page, i2v_page, ti2v_page, s2v_page, animate_page],
+        "Models": [t2v_page, i2v_page, animate_page, ti2v_page, s2v_page],
     },
     position="sidebar",
 )
