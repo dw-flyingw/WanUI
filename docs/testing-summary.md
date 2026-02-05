@@ -81,7 +81,7 @@ mypy utils/common.py pages/gallery.py
 **Environment:**
 - Working directory: `/data2/opt/WanUI/.worktrees/gallery-thumbnail-optimization`
 - Output directory: `/data2/opt/WanUI/output/`
-- Test data: 13 existing output projects (4 animate, 3 i2v, 6 t2v)
+- Test data: 11 existing output projects (4 animate, 3 i2v, 4 t2v)
 
 #### Manual Test Plan
 
@@ -98,7 +98,7 @@ streamlit run app.py
 3. Observe initial rendering
 
 **Expected Behavior:**
-- Gallery displays all 13 projects in grid layout
+- Gallery displays all 11 projects in grid layout
 - Each card shows thumbnail instead of full video
 - Progress spinner appears briefly during thumbnail extraction
 - Thumbnails load quickly (< 1 second per project)
@@ -262,15 +262,15 @@ streamlit run app.py
 #### Expected Performance Improvements
 
 **Before (Full Video Loading):**
-- Gallery load time: ~10-15 seconds for 13 projects
+- Gallery load time: ~10-15 seconds for 11 projects
 - Memory usage: ~800MB-1.5GB (all videos decoded)
 - Network transfer: ~150-200MB (all video files)
 - Browser responsiveness: Laggy during initial load
 
 **After (Thumbnail Loading):**
-- Gallery load time: ~2-4 seconds for 13 projects
+- Gallery load time: ~2-4 seconds for 11 projects
 - Memory usage: ~200-300MB (thumbnails only)
-- Disk usage: ~1.3MB for thumbnails (13 × 100KB)
+- Disk usage: ~1.1MB for thumbnails (11 × 100KB)
 - Browser responsiveness: Smooth and immediate
 
 **Performance Gains:**
