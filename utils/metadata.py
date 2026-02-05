@@ -46,7 +46,7 @@ class GenerationMetadata:
     generation_time_seconds: float = 0.0
     total_time_seconds: float = 0.0
 
-    # Output
+    # Output (relative to project directory)
     output_video_path: str = ""
     output_video_length_seconds: float = 0.0
     output_video_file_size_bytes: int = 0
@@ -124,7 +124,7 @@ def create_metadata(
         preprocessing_time_seconds=preprocessing_time_seconds,
         generation_time_seconds=generation_time,
         total_time_seconds=total_time,
-        output_video_path=str(output_video_path),
+        output_video_path=output_video_path.name,
         output_video_length_seconds=output_video_length_seconds,
         output_video_file_size_bytes=output_video_file_size_bytes,
         extra_settings=extra_settings or {},

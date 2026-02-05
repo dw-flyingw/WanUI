@@ -163,7 +163,15 @@ class OutputHistory:
             metadata: Project metadata
         """
         # Display video or thumbnail
-        output_path = project_dir / metadata.output_video_path
+        # Handle both absolute paths (old metadata) and relative paths (new metadata)
+        video_path = Path(metadata.output_video_path)
+        if video_path.is_absolute():
+            # Old absolute path - try to find file by name in project_dir
+            output_path = project_dir / video_path.name
+        else:
+            # New relative path
+            output_path = project_dir / video_path
+
         if output_path.exists():
             st.video(str(output_path))
         else:
