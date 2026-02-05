@@ -12,6 +12,7 @@ from typing import List, Optional, Tuple
 
 import streamlit as st
 
+from utils.common import extract_thumbnail
 from utils.config import OUTPUT_ROOT
 from utils.metadata import GenerationMetadata
 
@@ -162,7 +163,6 @@ class OutputHistory:
             project_dir: Path to the project directory
             metadata: Project metadata
         """
-        # Display video or thumbnail
         # Handle both absolute paths (old metadata) and relative paths (new metadata)
         video_path = Path(metadata.output_video_path)
         if video_path.is_absolute():
@@ -172,10 +172,40 @@ class OutputHistory:
             # New relative path
             output_path = project_dir / video_path
 
-        if output_path.exists():
-            st.video(str(output_path))
-        else:
+        if not output_path.exists():
             st.warning("Output video not found")
+            return
+
+        # Check for cached thumbnail or generate it
+        thumbnail_path = project_dir / "thumbnail.jpg"
+        use_thumbnail = False
+
+        if thumbnail_path.exists():
+            # Use cached thumbnail
+            use_thumbnail = True
+        else:
+            # Generate thumbnail on-demand
+            if extract_thumbnail(output_path, thumbnail_path):
+                use_thumbnail = True
+
+        # Display thumbnail or fall back to video
+        if use_thumbnail:
+            st.image(str(thumbnail_path), use_container_width=True)
+
+            # Add Play Video button
+            video_key = f"video_expanded_{project_dir.name}"
+            if video_key not in st.session_state:
+                st.session_state[video_key] = False
+
+            if st.button("▶ Play Video", key=f"play_{project_dir.name}", use_container_width=True):
+                st.session_state[video_key] = True
+
+            # Show video player if expanded
+            if st.session_state[video_key]:
+                st.video(str(output_path))
+        else:
+            # Fallback to video if thumbnail generation fails
+            st.video(str(output_path))
 
         # Display project info
         st.caption(f"**Model:** {metadata.task}")
@@ -186,6 +216,16 @@ class OutputHistory:
             st.caption(f"**Duration:** {metadata.duration_seconds}s ({metadata.frame_num} frames)")
 
         # Expandable details
+        self._render_details_expander(project_dir, metadata)
+
+    def _render_details_expander(self, project_dir: Path, metadata: GenerationMetadata):
+        """
+        Render the expandable details section for a project card.
+
+        Args:
+            project_dir: Path to the project directory
+            metadata: Project metadata
+        """
         with st.expander("View Details"):
             st.write("**Full Prompt:**")
             st.write(metadata.user_prompt)
