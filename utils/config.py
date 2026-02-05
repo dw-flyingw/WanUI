@@ -216,6 +216,12 @@ def init_session_state():
             st.session_state[f"{task_key}_last_output"] = None
             st.session_state[f"{task_key}_last_metadata"] = None
 
+            # Add duration state for tasks that support it
+            config = MODEL_CONFIGS[task]
+            if config.get("supports_duration_control", False):
+                duration_range = config["duration_range"]
+                st.session_state[f"{task_key}_duration"] = float(duration_range["default"])
+
 
 def get_task_session_key(task: str) -> str:
     """Convert task name to session state key format."""
