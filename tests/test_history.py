@@ -145,8 +145,8 @@ def test_render_project_card_expands_video_on_click(
     thumbnail_path = project_dir / "thumbnail.jpg"
     thumbnail_path.write_text("thumbnail")
 
-    # Simulate button click
-    mock_state[f"video_expanded_{project_dir.name}"] = True
+    # Simulate button click - state starts False, button click toggles to True
+    mock_state[f"video_expanded_{project_dir.name}"] = False
     mock_button.return_value = True
 
     history = OutputHistory(tmp_path)
@@ -154,6 +154,6 @@ def test_render_project_card_expands_video_on_click(
     # Execute
     history._render_project_card(project_dir, mock_metadata)
 
-    # Verify video shown
+    # Verify video shown after toggle
     mock_image.assert_called_once()
     mock_video.assert_called_once_with(str(video_path))

@@ -197,8 +197,9 @@ class OutputHistory:
             if video_key not in st.session_state:
                 st.session_state[video_key] = False
 
-            if st.button("▶ Play Video", key=f"play_{project_dir.name}", use_container_width=True):
-                st.session_state[video_key] = True
+            button_label = "⏸ Hide Video" if st.session_state[video_key] else "▶ Play Video"
+            if st.button(button_label, key=f"play_{project_dir.name}", use_container_width=True):
+                st.session_state[video_key] = not st.session_state[video_key]
 
             # Show video player if expanded
             if st.session_state[video_key]:
