@@ -56,6 +56,8 @@ MODEL_CONFIGS = {
         "requires_video": False,
         "requires_audio": False,
         "requires_preprocessing": False,
+        "duration_range": {"min": 5, "max": 10, "step": 1, "default": 5},
+        "supports_duration_control": True,
     },
     "i2v-A14B": {
         "task": "i2v-A14B",
@@ -74,6 +76,8 @@ MODEL_CONFIGS = {
         "requires_video": False,
         "requires_audio": False,
         "requires_preprocessing": False,
+        "duration_range": {"min": 5, "max": 10, "step": 1, "default": 5},
+        "supports_duration_control": True,
     },
     "ti2v-5B": {
         "task": "ti2v-5B",
@@ -93,6 +97,8 @@ MODEL_CONFIGS = {
         "requires_audio": False,
         "requires_preprocessing": False,
         "supports_both_t2v_i2v": True,
+        "duration_range": {"min": 2, "max": 5, "step": 0.5, "default": 2},
+        "supports_duration_control": True,
     },
     "s2v-14B": {
         "task": "s2v-14B",
@@ -114,6 +120,7 @@ MODEL_CONFIGS = {
         "requires_preprocessing": False,
         "supports_tts": True,
         "supports_pose_video": True,
+        "supports_duration_control": False,  # Audio-driven, duration determined by audio
     },
     "animate-14B": {
         "task": "animate-14B",
@@ -133,6 +140,8 @@ MODEL_CONFIGS = {
         "requires_video": True,
         "requires_audio": False,  # Optional
         "requires_preprocessing": True,
+        "duration_range": {"min": 2, "max": 5, "step": 0.5, "default": 2.5},
+        "supports_duration_control": True,
     },
 }
 
