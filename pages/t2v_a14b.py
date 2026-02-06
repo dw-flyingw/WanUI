@@ -3,6 +3,7 @@ T2V-A14B page for Text-to-Video generation.
 """
 
 import sys
+import uuid
 from datetime import datetime
 from pathlib import Path
 
@@ -17,7 +18,6 @@ from utils.common import (
     get_video_info,
     sanitize_project_name,
 )
-from utils.gpu import render_gpu_selector
 from utils.config import (
     DEFAULT_PROMPTS,
     MODEL_CONFIGS,
@@ -31,9 +31,11 @@ from utils.config import (
     render_example_prompts,
 )
 from utils.generation import run_generation
+from utils.gpu import render_gpu_selector
 from utils.metadata import create_metadata
 from utils.prompt_utils import extend_prompt
-from utils.sidebar import render_sidebar_header, render_sidebar_footer
+from utils.queue import generation_queue, get_queue_status_message, wait_for_queue_turn
+from utils.sidebar import render_sidebar_footer, render_sidebar_header
 from utils.theme import load_custom_theme, render_page_header
 
 TASK = "t2v-A14B"
@@ -48,7 +50,7 @@ render_sidebar_header()
 render_page_header(
     title="Text to Video",
     description="Generate high-quality videos from text prompts using the T2V-A14B model (MoE 14B)",
-    icon="📄"
+    icon="📄",
 )
 
 # Initialize session state for this page
@@ -105,7 +107,9 @@ with st.sidebar:
 
     sample_solver = st.selectbox("Solver", ["unipc", "dpm++"], index=0)
 
-    seed = st.number_input("Seed", min_value=-1, max_value=2147483647, value=-1, help="-1 for random")
+    seed = st.number_input(
+        "Seed", min_value=-1, max_value=2147483647, value=-1, help="-1 for random"
+    )
 
     st.divider()
 
@@ -132,7 +136,9 @@ st.caption(f"Output folder: `{OUTPUT_PATH}/{project_name}`")
 if project_dir.exists():
     existing_files = list(project_dir.glob("*"))
     if existing_files:
-        st.warning(f"Project folder already exists with {len(existing_files)} files. Files may be overwritten.")
+        st.warning(
+            f"Project folder already exists with {len(existing_files)} files. Files may be overwritten."
+        )
 
 # Prompt section
 st.subheader("Prompts")
@@ -161,7 +167,9 @@ render_example_prompts(TASK)
 st.divider()
 
 # Prompt extension button
-extend_clicked = st.button("Extend Prompt", disabled=not PROMPT_EXTEND_MODEL, use_container_width=True)
+extend_clicked = st.button(
+    "Extend Prompt", disabled=not PROMPT_EXTEND_MODEL, use_container_width=True
+)
 
 if extend_clicked:
     with st.spinner("Extending prompt..."):
@@ -185,6 +193,11 @@ if st.session_state.get(f"{TASK_KEY}_extended_prompt"):
 
 # Generate button
 st.divider()
+
+# Show queue status if busy
+queue_status = get_queue_status_message()
+if queue_status:
+    st.info(f"Queue: {queue_status}")
 
 if st.session_state.get(f"{TASK_KEY}_generating", False):
     # Show cancel button while generating
@@ -211,7 +224,9 @@ else:
             final_output = project_dir / f"output_{timestamp}.mp4"
 
             # Use extended prompt if available
-            generation_prompt = st.session_state.get(f"{TASK_KEY}_extended_prompt") or prompt
+            generation_prompt = (
+                st.session_state.get(f"{TASK_KEY}_extended_prompt") or prompt
+            )
 
             # Calculate frame_num from duration
             if duration is not None:
@@ -223,41 +238,56 @@ else:
             def check_cancellation():
                 return st.session_state.get(f"{TASK_KEY}_cancel_requested", False)
 
-            with st.status("Generating video...", expanded=True) as status:
-                st.write(f"Running on {num_gpus} GPU(s)...")
-                st.write(f"Resolution: {resolution}, Frames: {frame_num}")
-                st.write(f"Prompt: {generation_prompt[:100]}...")
+            # Queue management
+            job_id = uuid.uuid4().hex[:8]
+            generation_queue.submit(job_id, TASK, generation_prompt[:50])
 
-                success, output, generation_time = run_generation(
-                    task=TASK,
-                    output_file=final_output,
-                    prompt=generation_prompt,
-                    num_gpus=num_gpus,
-                    resolution=resolution,
-                    sample_steps=sample_steps,
-                    sample_solver=sample_solver,
-                    sample_shift=sample_shift,
-                    sample_guide_scale=sample_guide_scale,
-                    seed=seed,
-                    frame_num=frame_num,
-                    gpu_ids=gpu_ids,
-                    use_prompt_extend=False,  # Already extended in UI
-                    cancellation_check=check_cancellation,
-                )
-
-                # Reset generating flag
+            if not wait_for_queue_turn(job_id, check_cancellation):
                 st.session_state[f"{TASK_KEY}_generating"] = False
+                st.warning("Generation was cancelled while waiting in queue.")
+                st.stop()
 
-                if not success:
-                    if "cancelled by user" in output.lower():
-                        status.update(label="Generation cancelled", state="error")
-                        st.warning("Generation was cancelled.")
-                    else:
-                        status.update(label="Generation failed", state="error")
-                        st.error(output)
-                    st.stop()
+            try:
+                with st.status("Generating video...", expanded=True) as status:
+                    st.write(f"Running on {num_gpus} GPU(s)...")
+                    st.write(f"Resolution: {resolution}, Frames: {frame_num}")
+                    st.write(f"Prompt: {generation_prompt[:100]}...")
 
-                status.update(label=f"Generation complete ({format_duration(generation_time)})", state="complete")
+                    success, output, generation_time = run_generation(
+                        task=TASK,
+                        output_file=final_output,
+                        prompt=generation_prompt,
+                        num_gpus=num_gpus,
+                        resolution=resolution,
+                        sample_steps=sample_steps,
+                        sample_solver=sample_solver,
+                        sample_shift=sample_shift,
+                        sample_guide_scale=sample_guide_scale,
+                        seed=seed,
+                        frame_num=frame_num,
+                        gpu_ids=gpu_ids,
+                        use_prompt_extend=False,  # Already extended in UI
+                        cancellation_check=check_cancellation,
+                    )
+
+                    # Reset generating flag
+                    st.session_state[f"{TASK_KEY}_generating"] = False
+
+                    if not success:
+                        if "cancelled by user" in output.lower():
+                            status.update(label="Generation cancelled", state="error")
+                            st.warning("Generation was cancelled.")
+                        else:
+                            status.update(label="Generation failed", state="error")
+                            st.error(output)
+                        st.stop()
+
+                    status.update(
+                        label=f"Generation complete ({format_duration(generation_time)})",
+                        state="complete",
+                    )
+            finally:
+                generation_queue.release(job_id)
 
             generation_end = datetime.now()
 
@@ -295,7 +325,9 @@ else:
 
         # Display result
         if final_output.exists():
-            st.success(f"Video generated successfully! Saved to `{OUTPUT_PATH}/{project_name}`")
+            st.success(
+                f"Video generated successfully! Saved to `{OUTPUT_PATH}/{project_name}`"
+            )
             st.video(str(final_output))
 
             # Show metadata summary
@@ -304,7 +336,9 @@ else:
                 with col1:
                     st.metric("Duration", f"{video_info['duration']:.1f}s")
                 with col2:
-                    st.metric("File Size", format_file_size(video_info["file_size_bytes"]))
+                    st.metric(
+                        "File Size", format_file_size(video_info["file_size_bytes"])
+                    )
                 with col3:
                     st.metric("Generation Time", format_duration(generation_time))
 
@@ -318,7 +352,9 @@ else:
                     if f.is_file():
                         st.write(f"  - {f.name}")
         else:
-            st.warning("Output file not found at expected location. Check logs for details.")
+            st.warning(
+                "Output file not found at expected location. Check logs for details."
+            )
             st.code(output)
 
 # Footer

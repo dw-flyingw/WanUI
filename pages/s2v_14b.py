@@ -4,6 +4,7 @@ S2V-14B page for Speech-to-Video generation.
 
 import shutil
 import sys
+import uuid
 from datetime import datetime
 from pathlib import Path
 
@@ -19,8 +20,6 @@ from utils.common import (
     sanitize_project_name,
     save_uploaded_file,
 )
-from utils.examples import ExampleLibrary
-from utils.gpu import render_gpu_selector
 from utils.config import (
     DEFAULT_PROMPTS,
     MODEL_CONFIGS,
@@ -31,10 +30,13 @@ from utils.config import (
     get_task_session_key,
     render_example_prompts,
 )
+from utils.examples import ExampleLibrary
 from utils.generation import run_generation
+from utils.gpu import render_gpu_selector
 from utils.metadata import create_metadata
 from utils.prompt_utils import extend_prompt
-from utils.sidebar import render_sidebar_header, render_sidebar_footer
+from utils.queue import generation_queue, get_queue_status_message, wait_for_queue_turn
+from utils.sidebar import render_sidebar_footer, render_sidebar_header
 from utils.theme import load_custom_theme
 
 TASK = "s2v-14B"
@@ -50,7 +52,9 @@ example_library = ExampleLibrary(EXAMPLES_ROOT)
 
 
 st.title("〰️ Speech to Video")
-st.markdown("Generate talking head video from audio and reference image using the S2V-14B model")
+st.markdown(
+    "Generate talking head video from audio and reference image using the S2V-14B model"
+)
 
 # Initialize session state for this page
 if f"{TASK_KEY}_extended_prompt" not in st.session_state:
@@ -131,7 +135,9 @@ with st.sidebar:
 
     sample_solver = st.selectbox("Solver", ["unipc", "dpm++"], index=0)
 
-    seed = st.number_input("Seed", min_value=-1, max_value=2147483647, value=-1, help="-1 for random")
+    seed = st.number_input(
+        "Seed", min_value=-1, max_value=2147483647, value=-1, help="-1 for random"
+    )
 
     st.divider()
 
@@ -143,7 +149,9 @@ col1, col2 = st.columns(2)
 with col1:
     st.subheader("Reference Image")
 
-    image_example_loaded = st.session_state.get(f"{TASK_KEY}_image_example_loaded", False)
+    image_example_loaded = st.session_state.get(
+        f"{TASK_KEY}_image_example_loaded", False
+    )
 
     if image_example_loaded:
         # Show loaded example
@@ -155,7 +163,11 @@ with col1:
             st.image(str(example_path), use_container_width=True)
 
         # Clear button
-        if st.button("Clear Example (Upload My Own)", key="clear_image_example", use_container_width=True):
+        if st.button(
+            "Clear Example (Upload My Own)",
+            key="clear_image_example",
+            use_container_width=True,
+        ):
             st.session_state[f"{TASK_KEY}_image_example_loaded"] = False
             st.session_state[f"{TASK_KEY}_loaded_image_example_path"] = None
             st.session_state[f"{TASK_KEY}_loaded_image_example_id"] = None
@@ -180,17 +192,24 @@ with col1:
             media_type="image",
             columns=2,
             show_none_option=image_example_loaded,
-            key_suffix="s2v_image"
+            key_suffix="s2v_image",
         )
 
         # Load button
         if selected_image_id is not None:
-            if st.button("Load Selected Example", key="load_image_example", type="primary", use_container_width=True):
+            if st.button(
+                "Load Selected Example",
+                key="load_image_example",
+                type="primary",
+                use_container_width=True,
+            ):
                 # Get example details
                 example = example_library.get_example_by_id(selected_image_id)
                 if example and example.path.exists():
                     st.session_state[f"{TASK_KEY}_image_example_loaded"] = True
-                    st.session_state[f"{TASK_KEY}_loaded_image_example_path"] = example.path
+                    st.session_state[f"{TASK_KEY}_loaded_image_example_path"] = (
+                        example.path
+                    )
                     st.session_state[f"{TASK_KEY}_loaded_image_example_id"] = example.id
                     st.rerun()
                 else:
@@ -204,7 +223,9 @@ with col2:
         help="Choose how to provide audio",
     )
 
-    audio_example_loaded = st.session_state.get(f"{TASK_KEY}_audio_example_loaded", False)
+    audio_example_loaded = st.session_state.get(
+        f"{TASK_KEY}_audio_example_loaded", False
+    )
 
     if audio_mode == "Upload audio file":
         if audio_example_loaded:
@@ -217,7 +238,11 @@ with col2:
                 st.audio(str(example_path))
 
             # Clear button
-            if st.button("Clear Example (Upload My Own)", key="clear_audio_example", use_container_width=True):
+            if st.button(
+                "Clear Example (Upload My Own)",
+                key="clear_audio_example",
+                use_container_width=True,
+            ):
                 st.session_state[f"{TASK_KEY}_audio_example_loaded"] = False
                 st.session_state[f"{TASK_KEY}_loaded_audio_example_path"] = None
                 st.session_state[f"{TASK_KEY}_loaded_audio_example_id"] = None
@@ -242,18 +267,27 @@ with col2:
                 media_type="audio",
                 columns=2,
                 show_none_option=audio_example_loaded,
-                key_suffix="s2v_audio"
+                key_suffix="s2v_audio",
             )
 
             # Load button
             if selected_audio_id is not None:
-                if st.button("Load Selected Example", key="load_audio_example", type="primary", use_container_width=True):
+                if st.button(
+                    "Load Selected Example",
+                    key="load_audio_example",
+                    type="primary",
+                    use_container_width=True,
+                ):
                     # Get example details
                     example = example_library.get_example_by_id(selected_audio_id)
                     if example and example.path.exists():
                         st.session_state[f"{TASK_KEY}_audio_example_loaded"] = True
-                        st.session_state[f"{TASK_KEY}_loaded_audio_example_path"] = example.path
-                        st.session_state[f"{TASK_KEY}_loaded_audio_example_id"] = example.id
+                        st.session_state[f"{TASK_KEY}_loaded_audio_example_path"] = (
+                            example.path
+                        )
+                        st.session_state[f"{TASK_KEY}_loaded_audio_example_id"] = (
+                            example.id
+                        )
                         st.rerun()
                     else:
                         st.error(f"Example file not found: {selected_audio_id}")
@@ -272,7 +306,11 @@ with col2:
                 st.audio(str(example_path))
 
             # Clear button
-            if st.button("Clear Example (Upload My Own)", key="clear_tts_audio_example", use_container_width=True):
+            if st.button(
+                "Clear Example (Upload My Own)",
+                key="clear_tts_audio_example",
+                use_container_width=True,
+            ):
                 st.session_state[f"{TASK_KEY}_audio_example_loaded"] = False
                 st.session_state[f"{TASK_KEY}_loaded_audio_example_path"] = None
                 st.session_state[f"{TASK_KEY}_loaded_audio_example_id"] = None
@@ -297,18 +335,27 @@ with col2:
                 media_type="audio",
                 columns=2,
                 show_none_option=audio_example_loaded,
-                key_suffix="s2v_tts_audio"
+                key_suffix="s2v_tts_audio",
             )
 
             # Load button
             if selected_tts_audio_id is not None:
-                if st.button("Load Selected Example", key="load_tts_audio_example", type="primary", use_container_width=True):
+                if st.button(
+                    "Load Selected Example",
+                    key="load_tts_audio_example",
+                    type="primary",
+                    use_container_width=True,
+                ):
                     # Get example details
                     example = example_library.get_example_by_id(selected_tts_audio_id)
                     if example and example.path.exists():
                         st.session_state[f"{TASK_KEY}_audio_example_loaded"] = True
-                        st.session_state[f"{TASK_KEY}_loaded_audio_example_path"] = example.path
-                        st.session_state[f"{TASK_KEY}_loaded_audio_example_id"] = example.id
+                        st.session_state[f"{TASK_KEY}_loaded_audio_example_path"] = (
+                            example.path
+                        )
+                        st.session_state[f"{TASK_KEY}_loaded_audio_example_id"] = (
+                            example.id
+                        )
                         st.rerun()
                     else:
                         st.error(f"Example file not found: {selected_tts_audio_id}")
@@ -341,7 +388,11 @@ with st.expander("Advanced: Pose-driven generation"):
             st.video(str(example_path))
 
         # Clear button
-        if st.button("Clear Example (Upload My Own)", key="clear_pose_example", use_container_width=True):
+        if st.button(
+            "Clear Example (Upload My Own)",
+            key="clear_pose_example",
+            use_container_width=True,
+        ):
             st.session_state[f"{TASK_KEY}_pose_example_loaded"] = False
             st.session_state[f"{TASK_KEY}_loaded_pose_example_path"] = None
             st.session_state[f"{TASK_KEY}_loaded_pose_example_id"] = None
@@ -366,17 +417,24 @@ with st.expander("Advanced: Pose-driven generation"):
             media_type="video",
             columns=1,
             show_none_option=pose_example_loaded,
-            key_suffix="s2v_pose"
+            key_suffix="s2v_pose",
         )
 
         # Load button
         if selected_pose_id is not None:
-            if st.button("Load Selected Example", key="load_pose_example", type="primary", use_container_width=True):
+            if st.button(
+                "Load Selected Example",
+                key="load_pose_example",
+                type="primary",
+                use_container_width=True,
+            ):
                 # Get example details
                 example = example_library.get_example_by_id(selected_pose_id)
                 if example and example.path.exists():
                     st.session_state[f"{TASK_KEY}_pose_example_loaded"] = True
-                    st.session_state[f"{TASK_KEY}_loaded_pose_example_path"] = example.path
+                    st.session_state[f"{TASK_KEY}_loaded_pose_example_path"] = (
+                        example.path
+                    )
                     st.session_state[f"{TASK_KEY}_loaded_pose_example_id"] = example.id
                     st.rerun()
                 else:
@@ -397,7 +455,9 @@ st.caption(f"Output folder: `{OUTPUT_PATH}/{project_name}`")
 if project_dir.exists():
     existing_files = list(project_dir.glob("*"))
     if existing_files:
-        st.warning(f"Project folder already exists with {len(existing_files)} files. Files may be overwritten.")
+        st.warning(
+            f"Project folder already exists with {len(existing_files)} files. Files may be overwritten."
+        )
 
 # Prompt section
 st.subheader("Prompts")
@@ -426,7 +486,9 @@ render_example_prompts(TASK)
 st.divider()
 
 # Prompt extension button
-extend_clicked = st.button("Extend Prompt", disabled=not PROMPT_EXTEND_MODEL, use_container_width=True)
+extend_clicked = st.button(
+    "Extend Prompt", disabled=not PROMPT_EXTEND_MODEL, use_container_width=True
+)
 
 if extend_clicked:
     with st.spinner("Extending prompt..."):
@@ -450,6 +512,11 @@ if st.session_state.get(f"{TASK_KEY}_extended_prompt"):
 
 # Generate button
 st.divider()
+
+# Show queue status if busy
+queue_status = get_queue_status_message()
+if queue_status:
+    st.info(f"Queue: {queue_status}")
 
 # Validation
 can_generate = True
@@ -503,7 +570,9 @@ else:
                 image_path = save_uploaded_file(uploaded_image, input_dir / "image.jpg")
             else:
                 # Copy from example
-                example_image_path = Path(st.session_state[f"{TASK_KEY}_loaded_image_example_path"])
+                example_image_path = Path(
+                    st.session_state[f"{TASK_KEY}_loaded_image_example_path"]
+                )
                 image_path = input_dir / "image.jpg"
                 shutil.copy(example_image_path, image_path)
 
@@ -511,10 +580,14 @@ else:
             tts_audio_path = None
             if uploaded_audio:
                 audio_ext = Path(uploaded_audio.name).suffix
-                audio_path = save_uploaded_file(uploaded_audio, input_dir / f"audio{audio_ext}")
+                audio_path = save_uploaded_file(
+                    uploaded_audio, input_dir / f"audio{audio_ext}"
+                )
             elif audio_example_loaded and not enable_tts:
                 # Copy from example for direct audio mode
-                example_audio_path = Path(st.session_state[f"{TASK_KEY}_loaded_audio_example_path"])
+                example_audio_path = Path(
+                    st.session_state[f"{TASK_KEY}_loaded_audio_example_path"]
+                )
                 audio_ext = example_audio_path.suffix
                 audio_path = input_dir / f"audio{audio_ext}"
                 shutil.copy(example_audio_path, audio_path)
@@ -522,22 +595,32 @@ else:
             if enable_tts:
                 if tts_prompt_audio:
                     tts_ext = Path(tts_prompt_audio.name).suffix
-                    tts_audio_path = save_uploaded_file(tts_prompt_audio, input_dir / f"tts_reference{tts_ext}")
+                    tts_audio_path = save_uploaded_file(
+                        tts_prompt_audio, input_dir / f"tts_reference{tts_ext}"
+                    )
                 elif audio_example_loaded:
                     # Copy from example for TTS reference
-                    example_audio_path = Path(st.session_state[f"{TASK_KEY}_loaded_audio_example_path"])
+                    example_audio_path = Path(
+                        st.session_state[f"{TASK_KEY}_loaded_audio_example_path"]
+                    )
                     tts_ext = example_audio_path.suffix
                     tts_audio_path = input_dir / f"tts_reference{tts_ext}"
                     shutil.copy(example_audio_path, tts_audio_path)
 
             pose_video_path = None
-            pose_example_loaded = st.session_state.get(f"{TASK_KEY}_pose_example_loaded", False)
+            pose_example_loaded = st.session_state.get(
+                f"{TASK_KEY}_pose_example_loaded", False
+            )
             if pose_video:
                 pose_ext = Path(pose_video.name).suffix
-                pose_video_path = save_uploaded_file(pose_video, input_dir / f"pose{pose_ext}")
+                pose_video_path = save_uploaded_file(
+                    pose_video, input_dir / f"pose{pose_ext}"
+                )
             elif pose_example_loaded:
                 # Copy from example
-                example_pose_path = Path(st.session_state[f"{TASK_KEY}_loaded_pose_example_path"])
+                example_pose_path = Path(
+                    st.session_state[f"{TASK_KEY}_loaded_pose_example_path"]
+                )
                 pose_ext = example_pose_path.suffix
                 pose_video_path = input_dir / f"pose{pose_ext}"
                 shutil.copy(example_pose_path, pose_video_path)
@@ -547,58 +630,77 @@ else:
             final_output = project_dir / f"output_{timestamp}.mp4"
 
             # Use extended prompt if available
-            generation_prompt = st.session_state.get(f"{TASK_KEY}_extended_prompt") or prompt
+            generation_prompt = (
+                st.session_state.get(f"{TASK_KEY}_extended_prompt") or prompt
+            )
 
             # Cancellation check function
             def check_cancellation():
                 return st.session_state.get(f"{TASK_KEY}_cancel_requested", False)
 
-            with st.status("Generating video...", expanded=True) as status:
-                st.write(f"Running on {num_gpus} GPU(s)...")
-                st.write(f"Resolution: {resolution}, Frames per clip: {infer_frames}")
-                if enable_tts:
-                    st.write("Using TTS for audio generation...")
-                st.write(f"Prompt: {generation_prompt[:100]}...")
+            # Queue management
+            job_id = uuid.uuid4().hex[:8]
+            generation_queue.submit(job_id, TASK, generation_prompt[:50])
 
-                success, output, generation_time = run_generation(
-                task=TASK,
-                output_file=final_output,
-                prompt=generation_prompt,
-                num_gpus=num_gpus,
-                resolution=resolution,
-                sample_steps=sample_steps,
-                sample_solver=sample_solver,
-                sample_shift=sample_shift,
-                sample_guide_scale=sample_guide_scale,
-                seed=seed,
-                image_path=image_path,
-                audio_path=audio_path,
-                gpu_ids=gpu_ids,
-                use_prompt_extend=False,  # Already extended in UI
-                enable_tts=enable_tts,
-                tts_prompt_audio=tts_audio_path,
-                tts_prompt_text=tts_prompt_text if enable_tts else None,
-                tts_text=tts_text if enable_tts else None,
-                pose_video=pose_video_path,
-                infer_frames=infer_frames,
-                start_from_ref=start_from_ref,
-                num_clip=num_clip if num_clip > 1 else None,
-                cancellation_check=check_cancellation,
-            )
-
-                # Reset generating flag
+            if not wait_for_queue_turn(job_id, check_cancellation):
                 st.session_state[f"{TASK_KEY}_generating"] = False
+                st.warning("Generation was cancelled while waiting in queue.")
+                st.stop()
 
-                if not success:
-                    if "cancelled by user" in output.lower():
-                        status.update(label="Generation cancelled", state="error")
-                        st.warning("Generation was cancelled.")
-                    else:
-                        status.update(label="Generation failed", state="error")
-                        st.error(output)
-                    st.stop()
+            try:
+                with st.status("Generating video...", expanded=True) as status:
+                    st.write(f"Running on {num_gpus} GPU(s)...")
+                    st.write(
+                        f"Resolution: {resolution}, Frames per clip: {infer_frames}"
+                    )
+                    if enable_tts:
+                        st.write("Using TTS for audio generation...")
+                    st.write(f"Prompt: {generation_prompt[:100]}...")
 
-                status.update(label=f"Generation complete ({format_duration(generation_time)})", state="complete")
+                    success, output, generation_time = run_generation(
+                        task=TASK,
+                        output_file=final_output,
+                        prompt=generation_prompt,
+                        num_gpus=num_gpus,
+                        resolution=resolution,
+                        sample_steps=sample_steps,
+                        sample_solver=sample_solver,
+                        sample_shift=sample_shift,
+                        sample_guide_scale=sample_guide_scale,
+                        seed=seed,
+                        image_path=image_path,
+                        audio_path=audio_path,
+                        gpu_ids=gpu_ids,
+                        use_prompt_extend=False,  # Already extended in UI
+                        enable_tts=enable_tts,
+                        tts_prompt_audio=tts_audio_path,
+                        tts_prompt_text=tts_prompt_text if enable_tts else None,
+                        tts_text=tts_text if enable_tts else None,
+                        pose_video=pose_video_path,
+                        infer_frames=infer_frames,
+                        start_from_ref=start_from_ref,
+                        num_clip=num_clip if num_clip > 1 else None,
+                        cancellation_check=check_cancellation,
+                    )
+
+                    # Reset generating flag
+                    st.session_state[f"{TASK_KEY}_generating"] = False
+
+                    if not success:
+                        if "cancelled by user" in output.lower():
+                            status.update(label="Generation cancelled", state="error")
+                            st.warning("Generation was cancelled.")
+                        else:
+                            status.update(label="Generation failed", state="error")
+                            st.error(output)
+                        st.stop()
+
+                    status.update(
+                        label=f"Generation complete ({format_duration(generation_time)})",
+                        state="complete",
+                    )
+            finally:
+                generation_queue.release(job_id)
 
         generation_end = datetime.now()
 
@@ -624,8 +726,14 @@ else:
             output_video_file_size_bytes=video_info["file_size_bytes"],
             extended_prompt=st.session_state.get(f"{TASK_KEY}_extended_prompt"),
             source_image_path="input/image.jpg",
-            source_audio_path=str(audio_path.relative_to(project_dir)) if audio_path else None,
-            pose_video_path=str(pose_video_path.relative_to(project_dir)) if pose_video_path else None,
+            source_audio_path=(
+                str(audio_path.relative_to(project_dir)) if audio_path else None
+            ),
+            pose_video_path=(
+                str(pose_video_path.relative_to(project_dir))
+                if pose_video_path
+                else None
+            ),
             extra_settings={
                 "audio_mode": audio_mode,
                 "enable_tts": enable_tts,
@@ -642,7 +750,9 @@ else:
 
         # Display result
         if final_output.exists():
-            st.success(f"Video generated successfully! Saved to `{OUTPUT_PATH}/{project_name}`")
+            st.success(
+                f"Video generated successfully! Saved to `{OUTPUT_PATH}/{project_name}`"
+            )
             st.video(str(final_output))
 
             # Show metadata summary
@@ -651,7 +761,9 @@ else:
                 with col1:
                     st.metric("Duration", f"{video_info['duration']:.1f}s")
                 with col2:
-                    st.metric("File Size", format_file_size(video_info["file_size_bytes"]))
+                    st.metric(
+                        "File Size", format_file_size(video_info["file_size_bytes"])
+                    )
                 with col3:
                     st.metric("Generation Time", format_duration(generation_time))
 
@@ -667,12 +779,18 @@ else:
                     else:
                         files = list(subdir.glob("*"))
                     if files:
-                        label = f"**{subdir.relative_to(project_dir)}/**" if subdir != project_dir else "**Root:**"
+                        label = (
+                            f"**{subdir.relative_to(project_dir)}/**"
+                            if subdir != project_dir
+                            else "**Root:**"
+                        )
                         st.write(label)
                         for f in files:
                             st.write(f"  - {f.name}")
         else:
-            st.warning("Output file not found at expected location. Check logs for details.")
+            st.warning(
+                "Output file not found at expected location. Check logs for details."
+            )
             st.code(output)
 
 # Footer

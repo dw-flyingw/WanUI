@@ -4,6 +4,7 @@ TI2V-5B page for fast Text/Image-to-Video generation.
 
 import shutil
 import sys
+import uuid
 from datetime import datetime
 from pathlib import Path
 
@@ -18,8 +19,6 @@ from utils.common import (
     get_video_info,
     sanitize_project_name,
 )
-from utils.examples import ExampleLibrary
-from utils.gpu import render_gpu_selector
 from utils.config import (
     DEFAULT_PROMPTS,
     FRONTEND_ROOT,
@@ -33,10 +32,13 @@ from utils.config import (
     render_duration_slider,
     render_example_prompts,
 )
+from utils.examples import ExampleLibrary
 from utils.generation import run_generation
+from utils.gpu import render_gpu_selector
 from utils.metadata import create_metadata
 from utils.prompt_utils import extend_prompt
-from utils.sidebar import render_sidebar_header, render_sidebar_footer
+from utils.queue import generation_queue, get_queue_status_message, wait_for_queue_turn
+from utils.sidebar import render_sidebar_footer, render_sidebar_header
 from utils.theme import load_custom_theme
 
 TASK = "ti2v-5B"
@@ -52,7 +54,9 @@ render_sidebar_header()
 load_custom_theme()
 
 st.title("⚡ Fast Text/Image to Video")
-st.markdown("Fast 720P video generation at 24fps - supports both text-only and image+text input")
+st.markdown(
+    "Fast 720P video generation at 24fps - supports both text-only and image+text input"
+)
 
 # Initialize session state for this page
 if f"{TASK_KEY}_extended_prompt" not in st.session_state:
@@ -78,7 +82,7 @@ mode = st.radio(
     ["Text Only (T2V)", "Image + Text (I2V)"],
     horizontal=True,
     key=f"{TASK_KEY}_mode_select",
-    help="TI2V-5B supports both text-only generation and image-guided generation"
+    help="TI2V-5B supports both text-only generation and image-guided generation",
 )
 st.session_state[f"{TASK_KEY}_mode"] = mode
 
@@ -128,7 +132,9 @@ with st.sidebar:
 
     sample_solver = st.selectbox("Solver", ["unipc", "dpm++"], index=0)
 
-    seed = st.number_input("Seed", min_value=-1, max_value=2147483647, value=-1, help="-1 for random")
+    seed = st.number_input(
+        "Seed", min_value=-1, max_value=2147483647, value=-1, help="-1 for random"
+    )
 
     st.divider()
 
@@ -155,7 +161,9 @@ st.caption(f"Output folder: `{OUTPUT_PATH}/{project_name}`")
 if project_dir.exists():
     existing_files = list(project_dir.glob("*"))
     if existing_files:
-        st.warning(f"Project folder already exists with {len(existing_files)} files. Files may be overwritten.")
+        st.warning(
+            f"Project folder already exists with {len(existing_files)} files. Files may be overwritten."
+        )
 
 # Image upload (only for I2V mode)
 uploaded_image = None
@@ -185,7 +193,7 @@ if mode == "Image + Text (I2V)":
         uploaded_image = st.file_uploader(
             "Upload reference image",
             type=["jpg", "jpeg", "png", "webp"],
-            help="Upload an image to guide the video generation"
+            help="Upload an image to guide the video generation",
         )
         if uploaded_image:
             st.image(uploaded_image, use_container_width=True)
@@ -200,12 +208,14 @@ if mode == "Image + Text (I2V)":
             media_type="image",
             columns=3,
             show_none_option=example_loaded,
-            key_suffix="ti2v"
+            key_suffix="ti2v",
         )
 
         # Load button
         if selected_id is not None:
-            if st.button("Load Selected Example", type="primary", use_container_width=True):
+            if st.button(
+                "Load Selected Example", type="primary", use_container_width=True
+            ):
                 # Get example details
                 example = example_library.get_example_by_id(selected_id)
                 if example and example.path.exists():
@@ -244,7 +254,9 @@ render_example_prompts(TASK)
 st.divider()
 
 # Prompt extension button
-extend_clicked = st.button("Extend Prompt", disabled=not PROMPT_EXTEND_MODEL, use_container_width=True)
+extend_clicked = st.button(
+    "Extend Prompt", disabled=not PROMPT_EXTEND_MODEL, use_container_width=True
+)
 
 if extend_clicked:
     with st.spinner("Extending prompt..."):
@@ -269,6 +281,11 @@ if st.session_state.get(f"{TASK_KEY}_extended_prompt"):
 # Generate button
 st.divider()
 
+# Show queue status if busy
+queue_status = get_queue_status_message()
+if queue_status:
+    st.info(f"Queue: {queue_status}")
+
 if st.session_state.get(f"{TASK_KEY}_generating", False):
     # Show cancel button while generating
     if st.button("⏹️ Cancel Generation", type="secondary", use_container_width=True):
@@ -282,11 +299,17 @@ else:
         else:
             # I2V-specific validation
             if mode == "Image + Text (I2V)":
-                example_loaded = st.session_state.get(f"{TASK_KEY}_example_loaded", False)
-                loaded_example_path = st.session_state.get(f"{TASK_KEY}_loaded_example_path")
+                example_loaded = st.session_state.get(
+                    f"{TASK_KEY}_example_loaded", False
+                )
+                loaded_example_path = st.session_state.get(
+                    f"{TASK_KEY}_loaded_example_path"
+                )
 
                 if not example_loaded and not uploaded_image:
-                    st.error("Please upload a reference image or select an example for I2V mode")
+                    st.error(
+                        "Please upload a reference image or select an example for I2V mode"
+                    )
                     st.stop()
                 elif example_loaded and not loaded_example_path:
                     st.error("Example path not found. Please select an example again.")
@@ -306,14 +329,20 @@ else:
 
             # Determine and save image source (only for I2V mode)
             if mode == "Image + Text (I2V)":
-                example_loaded = st.session_state.get(f"{TASK_KEY}_example_loaded", False)
-                loaded_example_path = st.session_state.get(f"{TASK_KEY}_loaded_example_path")
+                example_loaded = st.session_state.get(
+                    f"{TASK_KEY}_example_loaded", False
+                )
+                loaded_example_path = st.session_state.get(
+                    f"{TASK_KEY}_loaded_example_path"
+                )
 
                 if example_loaded:
                     # Copy example to input directory
                     try:
                         if not loaded_example_path.exists():
-                            st.error(f"Example image file not found: {loaded_example_path}")
+                            st.error(
+                                f"Example image file not found: {loaded_example_path}"
+                            )
                             st.session_state[f"{TASK_KEY}_example_loaded"] = False
                             st.stop()
 
@@ -340,7 +369,9 @@ else:
             final_output = project_dir / f"output_{timestamp}.mp4"
 
             # Use extended prompt if available
-            generation_prompt = st.session_state.get(f"{TASK_KEY}_extended_prompt") or prompt
+            generation_prompt = (
+                st.session_state.get(f"{TASK_KEY}_extended_prompt") or prompt
+            )
 
             # Calculate frame_num from duration
             if duration is not None:
@@ -352,43 +383,60 @@ else:
             def check_cancellation():
                 return st.session_state.get(f"{TASK_KEY}_cancel_requested", False)
 
-            with st.status("Generating video...", expanded=True) as status:
-                st.write(f"Mode: {mode}")
-                st.write(f"Running on {num_gpus} GPU(s)...")
-                st.write(f"Resolution: {resolution}, Frames: {frame_num} @ {CONFIG['sample_fps']} fps")
-                st.write(f"Prompt: {generation_prompt[:100]}...")
+            # Queue management
+            job_id = uuid.uuid4().hex[:8]
+            generation_queue.submit(job_id, TASK, generation_prompt[:50])
 
-                success, output, generation_time = run_generation(
-                    task=TASK,
-                    output_file=final_output,
-                    prompt=generation_prompt,
-                    num_gpus=num_gpus,
-                    resolution=resolution,
-                    sample_steps=sample_steps,
-                    sample_solver=sample_solver,
-                    sample_shift=sample_shift,
-                    sample_guide_scale=sample_guide_scale,
-                    seed=seed,
-                    frame_num=frame_num,
-                    gpu_ids=gpu_ids,
-                    use_prompt_extend=False,  # Already extended in UI
-                    image_path=image_path,
-                    cancellation_check=check_cancellation,
-                )
-
-                # Reset generating flag
+            if not wait_for_queue_turn(job_id, check_cancellation):
                 st.session_state[f"{TASK_KEY}_generating"] = False
+                st.warning("Generation was cancelled while waiting in queue.")
+                st.stop()
 
-                if not success:
-                    if "cancelled by user" in output.lower():
-                        status.update(label="Generation cancelled", state="error")
-                        st.warning("Generation was cancelled.")
-                    else:
-                        status.update(label="Generation failed", state="error")
-                        st.error(output)
-                    st.stop()
+            try:
+                with st.status("Generating video...", expanded=True) as status:
+                    st.write(f"Mode: {mode}")
+                    st.write(f"Running on {num_gpus} GPU(s)...")
+                    st.write(
+                        f"Resolution: {resolution}, Frames: {frame_num} @ {CONFIG['sample_fps']} fps"
+                    )
+                    st.write(f"Prompt: {generation_prompt[:100]}...")
 
-                status.update(label=f"Generation complete ({format_duration(generation_time)})", state="complete")
+                    success, output, generation_time = run_generation(
+                        task=TASK,
+                        output_file=final_output,
+                        prompt=generation_prompt,
+                        num_gpus=num_gpus,
+                        resolution=resolution,
+                        sample_steps=sample_steps,
+                        sample_solver=sample_solver,
+                        sample_shift=sample_shift,
+                        sample_guide_scale=sample_guide_scale,
+                        seed=seed,
+                        frame_num=frame_num,
+                        gpu_ids=gpu_ids,
+                        use_prompt_extend=False,  # Already extended in UI
+                        image_path=image_path,
+                        cancellation_check=check_cancellation,
+                    )
+
+                    # Reset generating flag
+                    st.session_state[f"{TASK_KEY}_generating"] = False
+
+                    if not success:
+                        if "cancelled by user" in output.lower():
+                            status.update(label="Generation cancelled", state="error")
+                            st.warning("Generation was cancelled.")
+                        else:
+                            status.update(label="Generation failed", state="error")
+                            st.error(output)
+                        st.stop()
+
+                    status.update(
+                        label=f"Generation complete ({format_duration(generation_time)})",
+                        state="complete",
+                    )
+            finally:
+                generation_queue.release(job_id)
 
             generation_end = datetime.now()
 
@@ -415,13 +463,33 @@ else:
                 extended_prompt=st.session_state.get(f"{TASK_KEY}_extended_prompt"),
                 duration_seconds=duration,
                 frame_num=frame_num,
-                source_image_path=str(image_path.relative_to(project_dir)) if image_path else None,
+                source_image_path=(
+                    str(image_path.relative_to(project_dir)) if image_path else None
+                ),
                 extra_settings={
                     "frame_num": frame_num,
                     "sample_fps": CONFIG["sample_fps"],
                     "mode": mode,
-                    "source_type": "example" if (mode == "Image + Text (I2V)" and st.session_state.get(f"{TASK_KEY}_example_loaded", False)) else "upload" if mode == "Image + Text (I2V)" else "text_only",
-                    "example_id": st.session_state.get(f"{TASK_KEY}_loaded_example_id") if (mode == "Image + Text (I2V)" and st.session_state.get(f"{TASK_KEY}_example_loaded", False)) else None,
+                    "source_type": (
+                        "example"
+                        if (
+                            mode == "Image + Text (I2V)"
+                            and st.session_state.get(
+                                f"{TASK_KEY}_example_loaded", False
+                            )
+                        )
+                        else "upload" if mode == "Image + Text (I2V)" else "text_only"
+                    ),
+                    "example_id": (
+                        st.session_state.get(f"{TASK_KEY}_loaded_example_id")
+                        if (
+                            mode == "Image + Text (I2V)"
+                            and st.session_state.get(
+                                f"{TASK_KEY}_example_loaded", False
+                            )
+                        )
+                        else None
+                    ),
                 },
             )
             metadata.save(project_dir / "metadata.json")
@@ -431,7 +499,9 @@ else:
 
             # Display result
             if final_output.exists():
-                st.success(f"Video generated successfully! Saved to `{OUTPUT_PATH}/{project_name}`")
+                st.success(
+                    f"Video generated successfully! Saved to `{OUTPUT_PATH}/{project_name}`"
+                )
                 st.video(str(final_output))
 
                 # Show metadata summary
@@ -440,7 +510,9 @@ else:
                     with col1:
                         st.metric("Duration", f"{video_info['duration']:.1f}s")
                     with col2:
-                        st.metric("File Size", format_file_size(video_info["file_size_bytes"]))
+                        st.metric(
+                            "File Size", format_file_size(video_info["file_size_bytes"])
+                        )
                     with col3:
                         st.metric("Generation Time", format_duration(generation_time))
 
@@ -455,7 +527,9 @@ else:
                         if f.is_file():
                             st.write(f"  - {f.relative_to(project_dir)}")
             else:
-                st.warning("Output file not found at expected location. Check logs for details.")
+                st.warning(
+                    "Output file not found at expected location. Check logs for details."
+                )
                 st.code(output)
 
 # Footer

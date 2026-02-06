@@ -4,6 +4,7 @@ Animate-14B page for character animation and replacement.
 
 import shutil
 import sys
+import uuid
 from datetime import datetime
 from pathlib import Path
 
@@ -20,8 +21,6 @@ from utils.common import (
     sanitize_project_name,
     save_uploaded_file,
 )
-from utils.examples import ExampleLibrary
-from utils.gpu import render_gpu_selector
 from utils.config import (
     DEFAULT_PROMPTS,
     MODEL_CONFIGS,
@@ -34,10 +33,13 @@ from utils.config import (
     render_duration_slider,
     render_example_prompts,
 )
+from utils.examples import ExampleLibrary
 from utils.generation import run_generation, run_preprocessing
+from utils.gpu import render_gpu_selector
 from utils.metadata import create_metadata
 from utils.prompt_utils import extend_prompt
-from utils.sidebar import render_sidebar_header, render_sidebar_footer
+from utils.queue import generation_queue, get_queue_status_message, wait_for_queue_turn
+from utils.sidebar import render_sidebar_footer, render_sidebar_header
 from utils.theme import load_custom_theme
 
 TASK = "animate-14B"
@@ -119,7 +121,9 @@ with st.sidebar:
 
     sample_solver = st.selectbox("Solver", ["unipc", "dpm++"], index=0)
 
-    seed = st.number_input("Seed", min_value=-1, max_value=2147483647, value=-1, help="-1 for random")
+    seed = st.number_input(
+        "Seed", min_value=-1, max_value=2147483647, value=-1, help="-1 for random"
+    )
 
     st.divider()
 
@@ -141,7 +145,9 @@ col1, col2 = st.columns(2)
 with col1:
     st.subheader("Source Video")
 
-    video_example_loaded = st.session_state.get(f"{TASK_KEY}_video_example_loaded", False)
+    video_example_loaded = st.session_state.get(
+        f"{TASK_KEY}_video_example_loaded", False
+    )
 
     if video_example_loaded:
         # Show loaded example
@@ -153,7 +159,11 @@ with col1:
             st.video(str(example_path))
 
         # Clear button
-        if st.button("Clear Example (Upload My Own)", key="clear_video_example", use_container_width=True):
+        if st.button(
+            "Clear Example (Upload My Own)",
+            key="clear_video_example",
+            use_container_width=True,
+        ):
             st.session_state[f"{TASK_KEY}_video_example_loaded"] = False
             st.session_state[f"{TASK_KEY}_loaded_video_example_path"] = None
             st.session_state[f"{TASK_KEY}_loaded_video_example_id"] = None
@@ -178,17 +188,24 @@ with col1:
             media_type="video",
             columns=2,
             show_none_option=video_example_loaded,
-            key_suffix="animate_video"
+            key_suffix="animate_video",
         )
 
         # Load button
         if selected_video_id is not None:
-            if st.button("Load Selected Example", key="load_video_example", type="primary", use_container_width=True):
+            if st.button(
+                "Load Selected Example",
+                key="load_video_example",
+                type="primary",
+                use_container_width=True,
+            ):
                 # Get example details
                 example = example_library.get_example_by_id(selected_video_id)
                 if example and example.path.exists():
                     st.session_state[f"{TASK_KEY}_video_example_loaded"] = True
-                    st.session_state[f"{TASK_KEY}_loaded_video_example_path"] = example.path
+                    st.session_state[f"{TASK_KEY}_loaded_video_example_path"] = (
+                        example.path
+                    )
                     st.session_state[f"{TASK_KEY}_loaded_video_example_id"] = example.id
                     st.rerun()
                 else:
@@ -197,7 +214,9 @@ with col1:
 with col2:
     st.subheader("Reference Image")
 
-    image_example_loaded = st.session_state.get(f"{TASK_KEY}_image_example_loaded", False)
+    image_example_loaded = st.session_state.get(
+        f"{TASK_KEY}_image_example_loaded", False
+    )
 
     if image_example_loaded:
         # Show loaded example
@@ -209,7 +228,11 @@ with col2:
             st.image(str(example_path), use_container_width=True)
 
         # Clear button
-        if st.button("Clear Example (Upload My Own)", key="clear_image_example", use_container_width=True):
+        if st.button(
+            "Clear Example (Upload My Own)",
+            key="clear_image_example",
+            use_container_width=True,
+        ):
             st.session_state[f"{TASK_KEY}_image_example_loaded"] = False
             st.session_state[f"{TASK_KEY}_loaded_image_example_path"] = None
             st.session_state[f"{TASK_KEY}_loaded_image_example_id"] = None
@@ -234,17 +257,24 @@ with col2:
             media_type="image",
             columns=2,
             show_none_option=image_example_loaded,
-            key_suffix="animate_image"
+            key_suffix="animate_image",
         )
 
         # Load button
         if selected_image_id is not None:
-            if st.button("Load Selected Example", key="load_image_example", type="primary", use_container_width=True):
+            if st.button(
+                "Load Selected Example",
+                key="load_image_example",
+                type="primary",
+                use_container_width=True,
+            ):
                 # Get example details
                 example = example_library.get_example_by_id(selected_image_id)
                 if example and example.path.exists():
                     st.session_state[f"{TASK_KEY}_image_example_loaded"] = True
-                    st.session_state[f"{TASK_KEY}_loaded_image_example_path"] = example.path
+                    st.session_state[f"{TASK_KEY}_loaded_image_example_path"] = (
+                        example.path
+                    )
                     st.session_state[f"{TASK_KEY}_loaded_image_example_id"] = example.id
                     st.rerun()
                 else:
@@ -285,7 +315,9 @@ st.caption(f"Output folder: `{OUTPUT_PATH}/{project_name}`")
 if project_dir.exists():
     existing_files = list(project_dir.glob("*"))
     if existing_files:
-        st.warning(f"Project folder already exists with {len(existing_files)} files. Files may be overwritten.")
+        st.warning(
+            f"Project folder already exists with {len(existing_files)} files. Files may be overwritten."
+        )
 
 # Prompt section
 st.subheader("Prompts")
@@ -298,7 +330,9 @@ prompt = st.text_area(
 )
 
 # Prompt extension button
-extend_clicked = st.button("Extend Prompt", disabled=not PROMPT_EXTEND_MODEL, use_container_width=True)
+extend_clicked = st.button(
+    "Extend Prompt", disabled=not PROMPT_EXTEND_MODEL, use_container_width=True
+)
 
 if extend_clicked:
     with st.spinner("Extending prompt..."):
@@ -323,13 +357,22 @@ if st.session_state.get(f"{TASK_KEY}_extended_prompt"):
 # Generate button
 st.divider()
 
+# Show queue status if busy
+queue_status = get_queue_status_message()
+if queue_status:
+    st.info(f"Queue: {queue_status}")
+
 if st.button("Generate Animation", type="primary", use_container_width=True):
     # Check for video input (either uploaded or example)
-    video_example_loaded = st.session_state.get(f"{TASK_KEY}_video_example_loaded", False)
+    video_example_loaded = st.session_state.get(
+        f"{TASK_KEY}_video_example_loaded", False
+    )
     if not uploaded_video and not video_example_loaded:
         st.error("Please upload a source video or select an example")
     # Check for image input (either uploaded or example)
-    elif not uploaded_image and not st.session_state.get(f"{TASK_KEY}_image_example_loaded", False):
+    elif not uploaded_image and not st.session_state.get(
+        f"{TASK_KEY}_image_example_loaded", False
+    ):
         st.error("Please upload a reference image or select an example")
     elif not prompt.strip():
         st.error("Please enter a prompt")
@@ -348,7 +391,9 @@ if st.button("Generate Animation", type="primary", use_container_width=True):
             video_path = save_uploaded_file(uploaded_video, input_dir / "video.mp4")
         else:
             # Copy from example
-            example_video_path = Path(st.session_state[f"{TASK_KEY}_loaded_video_example_path"])
+            example_video_path = Path(
+                st.session_state[f"{TASK_KEY}_loaded_video_example_path"]
+            )
             video_path = input_dir / "video.mp4"
             shutil.copy(example_video_path, video_path)
 
@@ -357,7 +402,9 @@ if st.button("Generate Animation", type="primary", use_container_width=True):
             image_path = save_uploaded_file(uploaded_image, input_dir / "image.jpg")
         else:
             # Copy from example
-            example_image_path = Path(st.session_state[f"{TASK_KEY}_loaded_image_example_path"])
+            example_image_path = Path(
+                st.session_state[f"{TASK_KEY}_loaded_image_example_path"]
+            )
             image_path = input_dir / "image.jpg"
             shutil.copy(example_image_path, image_path)
 
@@ -371,17 +418,23 @@ if st.button("Generate Animation", type="primary", use_container_width=True):
         audio_path = None
         if audio_source == "From source video":
             extracted_audio = input_dir / "extracted_audio.mp3"
-            with st.status("Extracting audio from source video...", expanded=False) as audio_status:
+            with st.status(
+                "Extracting audio from source video...", expanded=False
+            ) as audio_status:
                 success, result = extract_audio_from_video(video_path, extracted_audio)
                 if success:
                     audio_path = extracted_audio
                     audio_status.update(label="Audio extracted", state="complete")
                 else:
                     audio_status.update(label=f"Warning: {result}", state="complete")
-                    st.warning(f"Could not extract audio: {result}. Continuing without audio.")
+                    st.warning(
+                        f"Could not extract audio: {result}. Continuing without audio."
+                    )
         elif audio_source == "Upload custom audio" and uploaded_audio:
             audio_ext = Path(uploaded_audio.name).suffix
-            audio_path = save_uploaded_file(uploaded_audio, input_dir / f"audio{audio_ext}")
+            audio_path = save_uploaded_file(
+                uploaded_audio, input_dir / f"audio{audio_ext}"
+            )
 
         # Step 1: Preprocessing
         preprocessing_time = None
@@ -408,49 +461,68 @@ if st.button("Generate Animation", type="primary", use_container_width=True):
                 st.error(output)
                 st.stop()
 
-            status.update(label=f"Preprocessing complete ({format_duration(preprocessing_time)})", state="complete")
+            status.update(
+                label=f"Preprocessing complete ({format_duration(preprocessing_time)})",
+                state="complete",
+            )
             st.write("Generated files:")
             for f in processed_dir.glob("*"):
                 st.write(f"  - {f.name}")
 
-        # Step 2: Generation
+        # Step 2: Generation (queue acquired here, not during preprocessing)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         final_output = project_dir / f"output_{timestamp}.mp4"
 
         # Use extended prompt if available
-        generation_prompt = st.session_state.get(f"{TASK_KEY}_extended_prompt") or prompt
+        generation_prompt = (
+            st.session_state.get(f"{TASK_KEY}_extended_prompt") or prompt
+        )
 
-        with st.status("Generating animation...", expanded=True) as status:
-            st.write(f"Running on {num_gpus} GPU(s)...")
-            st.write(f"Prompt: {generation_prompt[:100]}...")
+        # Queue management — acquire before GPU-intensive generation step
+        job_id = uuid.uuid4().hex[:8]
+        generation_queue.submit(job_id, TASK, generation_prompt[:50])
 
-            success, output, generation_time = run_generation(
-                task=TASK,
-                output_file=final_output,
-                prompt=generation_prompt,
-                num_gpus=num_gpus,
-                resolution=resolution,
-                sample_steps=sample_steps,
-                sample_solver=sample_solver,
-                sample_shift=CONFIG["default_shift"],
-                sample_guide_scale=CONFIG["default_guide_scale"],
-                seed=seed,
-                audio_path=audio_path,
-                use_prompt_extend=False,  # Already extended in UI
-                src_root_path=processed_dir,
-                replace_flag=(mode == "replacement"),
-                refert_num=refert_num,
-                use_relighting_lora=use_relighting_lora,
-                frame_num=frame_num,
-                gpu_ids=gpu_ids,
-            )
+        if not wait_for_queue_turn(job_id):
+            st.warning("Generation was cancelled while waiting in queue.")
+            st.stop()
 
-            if not success:
-                status.update(label="Generation failed", state="error")
-                st.error(output)
-                st.stop()
+        try:
+            with st.status("Generating animation...", expanded=True) as status:
+                st.write(f"Running on {num_gpus} GPU(s)...")
+                st.write(f"Prompt: {generation_prompt[:100]}...")
 
-            status.update(label=f"Generation complete ({format_duration(generation_time)})", state="complete")
+                success, output, generation_time = run_generation(
+                    task=TASK,
+                    output_file=final_output,
+                    prompt=generation_prompt,
+                    num_gpus=num_gpus,
+                    resolution=resolution,
+                    sample_steps=sample_steps,
+                    sample_solver=sample_solver,
+                    sample_shift=CONFIG["default_shift"],
+                    sample_guide_scale=CONFIG["default_guide_scale"],
+                    seed=seed,
+                    audio_path=audio_path,
+                    use_prompt_extend=False,  # Already extended in UI
+                    src_root_path=processed_dir,
+                    replace_flag=(mode == "replacement"),
+                    refert_num=refert_num,
+                    use_relighting_lora=use_relighting_lora,
+                    frame_num=frame_num,
+                    gpu_ids=gpu_ids,
+                )
+
+                if not success:
+                    status.update(label="Generation failed", state="error")
+                    st.error(output)
+                    st.stop()
+
+                status.update(
+                    label=f"Generation complete ({format_duration(generation_time)})",
+                    state="complete",
+                )
+        finally:
+            generation_queue.release(job_id)
 
         generation_end = datetime.now()
 
@@ -479,7 +551,9 @@ if st.button("Generate Animation", type="primary", use_container_width=True):
             frame_num=frame_num,
             source_video_path="input/video.mp4",
             source_image_path="input/image.jpg",
-            source_audio_path=str(audio_path.relative_to(project_dir)) if audio_path else None,
+            source_audio_path=(
+                str(audio_path.relative_to(project_dir)) if audio_path else None
+            ),
             preprocessing_time_seconds=preprocessing_time,
             extra_settings={
                 "mode": mode,
@@ -497,7 +571,9 @@ if st.button("Generate Animation", type="primary", use_container_width=True):
 
         # Display result
         if final_output.exists():
-            st.success(f"Animation generated successfully! Saved to `{OUTPUT_PATH}/{project_name}`")
+            st.success(
+                f"Animation generated successfully! Saved to `{OUTPUT_PATH}/{project_name}`"
+            )
             st.video(str(final_output))
 
             # Show metadata summary
@@ -506,9 +582,13 @@ if st.button("Generate Animation", type="primary", use_container_width=True):
                 with col1:
                     st.metric("Duration", f"{video_info['duration']:.1f}s")
                 with col2:
-                    st.metric("File Size", format_file_size(video_info["file_size_bytes"]))
+                    st.metric(
+                        "File Size", format_file_size(video_info["file_size_bytes"])
+                    )
                 with col3:
-                    st.metric("Total Time", format_duration(metadata.total_time_seconds))
+                    st.metric(
+                        "Total Time", format_duration(metadata.total_time_seconds)
+                    )
 
                 st.write(f"**GPUs Used:** {num_gpus}")
                 st.write(f"**Preprocessing:** {format_duration(preprocessing_time)}")
@@ -522,12 +602,18 @@ if st.button("Generate Animation", type="primary", use_container_width=True):
                     else:
                         files = list(subdir.glob("*"))
                     if files:
-                        label = f"**{subdir.relative_to(project_dir)}/**" if subdir != project_dir else "**Root:**"
+                        label = (
+                            f"**{subdir.relative_to(project_dir)}/**"
+                            if subdir != project_dir
+                            else "**Root:**"
+                        )
                         st.write(label)
                         for f in files:
                             st.write(f"  - {f.name}")
         else:
-            st.warning("Output file not found at expected location. Check logs for details.")
+            st.warning(
+                "Output file not found at expected location. Check logs for details."
+            )
             st.code(output)
 
 # Footer
