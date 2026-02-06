@@ -411,6 +411,33 @@ h3 { font-size: 1.25rem; font-weight: 600; }
 }
 
 /* ============================
+   GALLERY THUMBNAILS
+   ============================ */
+.gallery-thumbnail {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-radius: 12px;
+    border: 1px solid var(--obsidian-border);
+    box-shadow: var(--shadow-medium);
+    transition: all var(--transition-smooth);
+    background: var(--obsidian-surface);
+}
+
+.gallery-thumbnail:hover {
+    border-color: var(--accent-cyan-dim);
+    box-shadow: var(--shadow-strong), var(--glow-cyan);
+    transform: translateY(-2px);
+}
+
+.gallery-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+}
+
+/* ============================
    VIDEO PLAYER
    ============================ */
 video {

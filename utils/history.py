@@ -2,6 +2,7 @@
 Output history system for browsing past generations.
 """
 
+import base64
 import io
 import os
 import shutil
@@ -189,7 +190,18 @@ class OutputHistory:
 
         # Display thumbnail or fall back to video
         if use_thumbnail:
-            st.image(str(thumbnail_path), use_container_width=True)
+            # Render thumbnail with fixed aspect ratio using custom CSS
+            with open(thumbnail_path, "rb") as f:
+                img_data = base64.b64encode(f.read()).decode()
+
+            st.markdown(
+                f"""
+                <div class="gallery-thumbnail">
+                    <img src="data:image/jpeg;base64,{img_data}" alt="Thumbnail">
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
             # Add Play Video button
             video_key = f"video_expanded_{project_dir.name}"
