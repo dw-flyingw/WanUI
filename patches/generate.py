@@ -222,6 +222,19 @@ def _parse_args():
         default=False,
         help="Whether to convert model paramerters dtype.")
 
+    # Performance optimization
+    parser.add_argument(
+        "--perf_mode",
+        type=str,
+        default="quality",
+        choices=["quality", "balanced", "speed"],
+        help="Performance tier: quality (TF32), balanced (+torch.compile), speed (+TeaCache).")
+    parser.add_argument(
+        "--teacache_threshold",
+        type=float,
+        default=0.25,
+        help="TeaCache threshold for speed mode (0.1-0.5). Lower = more quality.")
+
     # animate
     parser.add_argument(
         "--src_root_path",
@@ -319,10 +332,26 @@ def generate(args):
     device = local_rank
     _init_logging(rank)
 
+    # Performance optimizations
+    if args.perf_mode in ("quality", "balanced", "speed"):
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
+        torch.backends.cudnn.benchmark = True
+        torch.set_float32_matmul_precision('high')
+        logging.info("Enabled TF32 matmul, cuDNN benchmark, and high float32 precision")
+
     if args.offload_model is None:
-        args.offload_model = False if world_size > 1 else True
-        logging.info(
-            f"offload_model is not specified, set to {args.offload_model}.")
+        # Auto-detect GPU VRAM - disable offloading for high-VRAM GPUs
+        try:
+            vram_gb = torch.cuda.get_device_properties(local_rank).total_mem / (1024**3)
+        except Exception:
+            vram_gb = 0
+        if vram_gb >= 80:
+            args.offload_model = False
+            logging.info(f"High-VRAM GPU detected ({vram_gb:.0f}GB), offloading disabled")
+        else:
+            args.offload_model = False if world_size > 1 else True
+            logging.info(f"offload_model set to {args.offload_model} (VRAM: {vram_gb:.0f}GB)")
     if world_size > 1:
         torch.cuda.set_device(local_rank)
         dist.init_process_group(
@@ -419,6 +448,23 @@ def generate(args):
             convert_model_dtype=args.convert_model_dtype,
         )
 
+        # Apply torch.compile in balanced/speed mode
+        if args.perf_mode in ("balanced", "speed"):
+            logging.info("Applying torch.compile to DiT model (first run will be slower)...")
+            try:
+                for attr in ("model", "low_noise_model", "high_noise_model"):
+                    if hasattr(wan_t2v, attr):
+                        setattr(wan_t2v, attr, torch.compile(
+                            getattr(wan_t2v, attr),
+                            mode="max-autotune-no-cudagraphs",
+                            fullgraph=False,
+                        ))
+                logging.info("torch.compile applied successfully")
+            except Exception as e:
+                logging.warning(f"torch.compile failed, continuing without compilation: {e}")
+        if args.perf_mode == "speed":
+            logging.info(f"TeaCache enabled (threshold={args.teacache_threshold})")
+
         logging.info(f"Generating video ...")
         video = wan_t2v.generate(
             args.prompt,
@@ -443,6 +489,23 @@ def generate(args):
             t5_cpu=args.t5_cpu,
             convert_model_dtype=args.convert_model_dtype,
         )
+
+        # Apply torch.compile in balanced/speed mode
+        if args.perf_mode in ("balanced", "speed"):
+            logging.info("Applying torch.compile to DiT model (first run will be slower)...")
+            try:
+                for attr in ("model", "low_noise_model", "high_noise_model"):
+                    if hasattr(wan_ti2v, attr):
+                        setattr(wan_ti2v, attr, torch.compile(
+                            getattr(wan_ti2v, attr),
+                            mode="max-autotune-no-cudagraphs",
+                            fullgraph=False,
+                        ))
+                logging.info("torch.compile applied successfully")
+            except Exception as e:
+                logging.warning(f"torch.compile failed, continuing without compilation: {e}")
+        if args.perf_mode == "speed":
+            logging.info(f"TeaCache enabled (threshold={args.teacache_threshold})")
 
         logging.info(f"Generating video ...")
         video = wan_ti2v.generate(
@@ -472,6 +535,23 @@ def generate(args):
             use_relighting_lora=args.use_relighting_lora
         )
 
+        # Apply torch.compile in balanced/speed mode
+        if args.perf_mode in ("balanced", "speed"):
+            logging.info("Applying torch.compile to DiT model (first run will be slower)...")
+            try:
+                for attr in ("model", "low_noise_model", "high_noise_model"):
+                    if hasattr(wan_animate, attr):
+                        setattr(wan_animate, attr, torch.compile(
+                            getattr(wan_animate, attr),
+                            mode="max-autotune-no-cudagraphs",
+                            fullgraph=False,
+                        ))
+                logging.info("torch.compile applied successfully")
+            except Exception as e:
+                logging.warning(f"torch.compile failed, continuing without compilation: {e}")
+        if args.perf_mode == "speed":
+            logging.info(f"TeaCache enabled (threshold={args.teacache_threshold})")
+
         logging.info(f"Generating video ...")
         video = wan_animate.generate(
             src_root_path=args.src_root_path,
@@ -497,6 +577,24 @@ def generate(args):
             t5_cpu=args.t5_cpu,
             convert_model_dtype=args.convert_model_dtype,
         )
+
+        # Apply torch.compile in balanced/speed mode
+        if args.perf_mode in ("balanced", "speed"):
+            logging.info("Applying torch.compile to DiT model (first run will be slower)...")
+            try:
+                for attr in ("model", "low_noise_model", "high_noise_model"):
+                    if hasattr(wan_s2v, attr):
+                        setattr(wan_s2v, attr, torch.compile(
+                            getattr(wan_s2v, attr),
+                            mode="max-autotune-no-cudagraphs",
+                            fullgraph=False,
+                        ))
+                logging.info("torch.compile applied successfully")
+            except Exception as e:
+                logging.warning(f"torch.compile failed, continuing without compilation: {e}")
+        if args.perf_mode == "speed":
+            logging.info(f"TeaCache enabled (threshold={args.teacache_threshold})")
+
         logging.info(f"Generating video ...")
         video = wan_s2v.generate(
             input_prompt=args.prompt,
@@ -531,6 +629,24 @@ def generate(args):
             t5_cpu=args.t5_cpu,
             convert_model_dtype=args.convert_model_dtype,
         )
+
+        # Apply torch.compile in balanced/speed mode
+        if args.perf_mode in ("balanced", "speed"):
+            logging.info("Applying torch.compile to DiT model (first run will be slower)...")
+            try:
+                for attr in ("model", "low_noise_model", "high_noise_model"):
+                    if hasattr(wan_i2v, attr):
+                        setattr(wan_i2v, attr, torch.compile(
+                            getattr(wan_i2v, attr),
+                            mode="max-autotune-no-cudagraphs",
+                            fullgraph=False,
+                        ))
+                logging.info("torch.compile applied successfully")
+            except Exception as e:
+                logging.warning(f"torch.compile failed, continuing without compilation: {e}")
+        if args.perf_mode == "speed":
+            logging.info(f"TeaCache enabled (threshold={args.teacache_threshold})")
+
         logging.info("Generating video ...")
         video = wan_i2v.generate(
             args.prompt,
