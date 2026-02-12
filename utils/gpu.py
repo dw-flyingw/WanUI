@@ -87,6 +87,13 @@ def render_gpu_selector(default_value: int = 1, allow_gpu_selection: bool = True
 
     st.subheader("GPU Configuration")
 
+    # Determine which GPUs to auto-select: pick the N freest GPUs
+    freest_gpu_indices = set()
+    if gpu_info and allow_gpu_selection:
+        sorted_by_free = sorted(gpu_info, key=lambda g: g["memory_free_mb"], reverse=True)
+        for gpu in sorted_by_free[:default_value]:
+            freest_gpu_indices.add(gpu["index"])
+
     # Display GPU usage visualization
     selected_gpu_ids = []
     if gpu_info:
@@ -130,8 +137,8 @@ def render_gpu_selector(default_value: int = 1, allow_gpu_selection: bool = True
             # Add checkbox for GPU selection if enabled
             if allow_gpu_selection and col_check:
                 with col_check:
-                    # Auto-check GPUs with <80% usage
-                    default_checked = usage_pct < 0.8
+                    # Auto-check the N freest GPUs (where N = default_value)
+                    default_checked = gpu["index"] in freest_gpu_indices
                     if st.checkbox("", value=default_checked, key=f"gpu_{gpu['index']}_select", label_visibility="collapsed"):
                         selected_gpu_ids.append(gpu["index"])
 
