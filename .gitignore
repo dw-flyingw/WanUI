@@ -5,6 +5,8 @@ CLAUDE.md
 GEMIMI.md
 *.whl
 .worktrees/
+nohup.out
+.streamlit.pid
 
 
 # Byte-compiled / optimized / DLL files
