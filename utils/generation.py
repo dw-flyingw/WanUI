@@ -159,6 +159,9 @@ def run_generation(
     frame_num: Optional[int] = None,
     # GPU selection
     gpu_ids: Optional[list[int]] = None,
+    # Performance optimization
+    perf_mode: str = "quality",
+    teacache_threshold: float | None = None,
     # Timeout
     timeout: int = 7200,
     # Cancellation support
@@ -225,6 +228,14 @@ def run_generation(
     if gpu_ids is not None:
         env["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, gpu_ids))
 
+    # Performance optimization environment variables
+    env["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True,garbage_collection_threshold:0.8"
+
+    # NCCL tuning for multi-GPU NVLink
+    if num_gpus > 1:
+        env["NCCL_NVLS_ENABLE"] = "1"
+        env["NCCL_P2P_LEVEL"] = "NVL"
+
     # Build command
     if num_gpus > 1:
         cmd = [
@@ -276,6 +287,12 @@ def run_generation(
     # Multi-GPU options
     if num_gpus > 1:
         cmd.extend(["--dit_fsdp", "--t5_fsdp", "--ulysses_size", str(num_gpus)])
+
+    # Performance mode flags
+    cmd.extend(["--perf_mode", perf_mode])
+
+    if perf_mode == "speed" and teacache_threshold is not None:
+        cmd.extend(["--teacache_threshold", str(teacache_threshold)])
 
     # Prompt extension
     if use_prompt_extend and PROMPT_EXTEND_MODEL:
@@ -362,6 +379,7 @@ def run_generation(
                 error_msg += f"\n- Current configuration: {num_gpus} GPUs"
                 if gpu_ids:
                     error_msg += f" (IDs: {gpu_ids})"
+                error_msg += f"\n- Try reducing video duration or switching to a lower resolution"
                 error_msg += f"\n- Try reducing num_gpus or using gpu_ids to skip busy GPUs"
                 error_msg += f"\n- Run 'nvidia-smi' to check GPU memory availability"
             return False, error_msg, elapsed
