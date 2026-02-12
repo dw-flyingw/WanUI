@@ -20,6 +20,58 @@ PROMPT_EXTEND_METHOD = os.getenv("PROMPT_EXTEND_METHOD", "openai")
 PROMPT_EXTEND_LANG = os.getenv("PROMPT_EXTEND_LANG", "en")
 PROMPT_EXTEND_MODEL = os.getenv("PROMPT_EXTEND_MODEL", "")
 
+# Performance tier definitions
+PERF_TIERS = {
+    "quality": {
+        "label": "Quality",
+        "description": "Best quality, ~40% faster (TF32, no offloading)",
+        "tf32": True,
+        "cudnn_benchmark": True,
+        "torch_compile": False,
+        "teacache": False,
+        "magcache": False,
+    },
+    "balanced": {
+        "label": "Balanced",
+        "description": "Same quality, ~2x faster (+ torch.compile, first-run warmup)",
+        "tf32": True,
+        "cudnn_benchmark": True,
+        "torch_compile": True,
+        "teacache": False,
+        "magcache": True,
+    },
+    "speed": {
+        "label": "Speed",
+        "description": "Slight quality trade-off, ~3x faster (+ TeaCache step skipping)",
+        "tf32": True,
+        "cudnn_benchmark": True,
+        "torch_compile": True,
+        "teacache": True,
+        "magcache": True,
+    },
+}
+
+DEFAULT_PERF_TIER = "quality"
+DEFAULT_TEACACHE_THRESHOLD = 0.25
+
+# GPU allocation strategy definitions
+GPU_STRATEGIES = {
+    "auto": {
+        "label": "Auto",
+        "description": "Smart allocation based on current GPU usage",
+    },
+    "max_speed": {
+        "label": "Max Speed",
+        "description": "All GPUs for one job, queue blocks others",
+    },
+    "concurrent": {
+        "label": "Concurrent",
+        "description": "Isolate GPUs for parallel jobs (up to 4 simultaneous)",
+    },
+}
+
+DEFAULT_GPU_STRATEGY = "auto"
+
 # Resolve paths
 if not Path(WAN2_2_REPO).is_absolute():
     WAN2_2_ROOT = FRONTEND_ROOT / WAN2_2_REPO
@@ -144,6 +196,32 @@ MODEL_CONFIGS = {
         "supports_duration_control": True,
     },
 }
+
+# Extended duration ranges for high-VRAM GPUs (96GB+)
+EXTENDED_DURATION_RANGES = {
+    "t2v-A14B": {
+        "1280*720": {"min": 5, "max": 21, "step": 1, "default": 5},
+        "720*1280": {"min": 5, "max": 21, "step": 1, "default": 5},
+        "832*480": {"min": 5, "max": 33, "step": 1, "default": 5},
+        "480*832": {"min": 5, "max": 33, "step": 1, "default": 5},
+    },
+    "i2v-A14B": {
+        "1280*720": {"min": 5, "max": 21, "step": 1, "default": 5},
+        "720*1280": {"min": 5, "max": 21, "step": 1, "default": 5},
+        "832*480": {"min": 5, "max": 33, "step": 1, "default": 5},
+        "480*832": {"min": 5, "max": 33, "step": 1, "default": 5},
+    },
+}
+
+
+def get_duration_range(task: str, resolution: str, high_vram: bool = False) -> dict:
+    """Get duration range, optionally extended for high-VRAM GPUs."""
+    if high_vram and task in EXTENDED_DURATION_RANGES:
+        extended = EXTENDED_DURATION_RANGES[task]
+        if resolution in extended:
+            return extended[resolution]
+    config = MODEL_CONFIGS.get(task, {})
+    return config.get("duration_range", {"min": 2, "max": 10, "step": 1, "default": 5})
 
 # Default sample prompts for each model
 DEFAULT_PROMPTS = {
@@ -351,3 +429,52 @@ def render_duration_slider(task: str) -> float | None:
     st.caption(f"→ {frame_count} frames @ {fps} fps")
 
     return duration
+
+
+def render_perf_tier_selector(task: str) -> tuple[str, float | None]:
+    """Render performance tier dropdown and optional TeaCache threshold slider."""
+    st.subheader("Performance")
+
+    tier_options = list(PERF_TIERS.keys())
+    tier_labels = [f"{PERF_TIERS[t]['label']} — {PERF_TIERS[t]['description']}" for t in tier_options]
+
+    selected_idx = st.selectbox(
+        "Performance Mode",
+        range(len(tier_options)),
+        index=tier_options.index(DEFAULT_PERF_TIER),
+        format_func=lambda i: tier_labels[i],
+        help="Controls speed/quality trade-off. Quality is safest. Balanced adds torch.compile (first run slower). Speed adds step skipping.",
+    )
+    perf_tier = tier_options[selected_idx]
+
+    teacache_threshold = None
+    if perf_tier == "speed":
+        teacache_threshold = st.slider(
+            "Speed/Quality Balance",
+            min_value=0.1,
+            max_value=0.5,
+            value=DEFAULT_TEACACHE_THRESHOLD,
+            step=0.05,
+            help="Lower = more quality, higher = more speed. 0.25 is a good default.",
+        )
+
+    return perf_tier, teacache_threshold
+
+
+def render_gpu_strategy_selector() -> str:
+    """Render GPU allocation strategy dropdown."""
+    strategy_options = list(GPU_STRATEGIES.keys())
+    strategy_labels = [
+        f"{GPU_STRATEGIES[s]['label']} — {GPU_STRATEGIES[s]['description']}"
+        for s in strategy_options
+    ]
+
+    selected_idx = st.selectbox(
+        "GPU Strategy",
+        range(len(strategy_options)),
+        index=strategy_options.index(DEFAULT_GPU_STRATEGY),
+        format_func=lambda i: strategy_labels[i],
+        help="Auto adapts to current GPU usage. Max Speed uses all GPUs for one job. Concurrent isolates GPUs for parallel jobs.",
+    )
+
+    return strategy_options[selected_idx]
