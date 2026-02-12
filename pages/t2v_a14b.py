@@ -26,12 +26,15 @@ from utils.config import (
     PROMPT_EXTEND_METHOD,
     PROMPT_EXTEND_MODEL,
     calculate_frame_num,
+    get_duration_range,
     get_task_session_key,
     render_duration_slider,
     render_example_prompts,
+    render_gpu_strategy_selector,
+    render_perf_tier_selector,
 )
 from utils.generation import run_generation
-from utils.gpu import render_gpu_selector
+from utils.gpu import detect_gpu_profile, render_gpu_selector
 from utils.metadata import create_metadata
 from utils.prompt_utils import extend_prompt
 from utils.queue import generation_queue, get_queue_status_message, wait_for_queue_turn
@@ -41,6 +44,7 @@ from utils.theme import load_custom_theme, render_page_header
 TASK = "t2v-A14B"
 TASK_KEY = get_task_session_key(TASK)
 CONFIG = MODEL_CONFIGS[TASK]
+GPU_PROFILE = detect_gpu_profile()
 
 # Load theme and render sidebar
 load_custom_theme()
@@ -74,6 +78,17 @@ with st.sidebar:
         allow_gpu_selection=True,
         num_heads=CONFIG.get("num_heads"),
     )
+
+    st.divider()
+
+    # Performance optimization
+    perf_tier, teacache_threshold = render_perf_tier_selector(TASK)
+
+    # GPU Strategy
+    if GPU_PROFILE["gpu_count"] > 1:
+        gpu_strategy = render_gpu_strategy_selector()
+    else:
+        gpu_strategy = "max_speed"
 
     st.divider()
 
@@ -113,9 +128,23 @@ with st.sidebar:
 
     st.divider()
 
-    # Duration control
+    # Duration control - extended for high-VRAM GPUs
     st.subheader("Duration")
-    duration = render_duration_slider(TASK)
+    duration_range = get_duration_range(TASK, resolution, GPU_PROFILE["high_vram"])
+    duration = st.slider(
+        "Duration (seconds)",
+        min_value=float(duration_range["min"]),
+        max_value=float(duration_range["max"]),
+        value=float(duration_range["default"]),
+        step=float(duration_range["step"]),
+        key=f"{TASK_KEY}_duration",
+        label_visibility="collapsed",
+    )
+    fps = CONFIG["sample_fps"]
+    frame_count = calculate_frame_num(duration, fps)
+    st.caption(f"→ {frame_count} frames @ {fps} fps")
+    if GPU_PROFILE["high_vram"]:
+        st.caption("Extended range available (high-VRAM GPU)")
 
     st.divider()
 
@@ -252,6 +281,7 @@ else:
                     st.write(f"Running on {num_gpus} GPU(s)...")
                     st.write(f"Resolution: {resolution}, Frames: {frame_num}")
                     st.write(f"Prompt: {generation_prompt[:100]}...")
+                    st.write(f"Performance: {perf_tier.title()} mode")
 
                     success, output, generation_time = run_generation(
                         task=TASK,
@@ -268,6 +298,8 @@ else:
                         gpu_ids=gpu_ids,
                         use_prompt_extend=False,  # Already extended in UI
                         cancellation_check=check_cancellation,
+                        perf_mode=perf_tier,
+                        teacache_threshold=teacache_threshold,
                     )
 
                     # Reset generating flag
