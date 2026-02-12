@@ -67,6 +67,76 @@ def get_gpu_info() -> list[dict]:
         return []
 
 
+def detect_gpu_profile() -> dict:
+    """
+    Detect GPU hardware profile for optimization decisions.
+
+    Queries GPU info and compute capability to determine hardware characteristics
+    such as VRAM size, architecture generation (e.g., Blackwell), and GPU count.
+
+    Returns:
+        dict: GPU profile with keys:
+            - vram_gb: float (per GPU VRAM in GB, from first GPU)
+            - compute_capability: str (e.g., "12.0")
+            - gpu_name: str (model name of first GPU)
+            - gpu_count: int (number of GPUs detected)
+            - high_vram: bool (True if >= 80GB per GPU)
+            - is_blackwell: bool (True if compute capability major version >= 12)
+    """
+    defaults = {
+        "vram_gb": 0.0,
+        "compute_capability": "0.0",
+        "gpu_name": "unknown",
+        "gpu_count": 0,
+        "high_vram": False,
+        "is_blackwell": False,
+    }
+
+    try:
+        gpu_info = get_gpu_info()
+        if not gpu_info:
+            return defaults
+
+        # Get compute capability from nvidia-smi
+        compute_cap = "0.0"
+        try:
+            result = subprocess.run(
+                [
+                    "nvidia-smi",
+                    "--query-gpu=compute_cap",
+                    "--format=csv,noheader,nounits",
+                ],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            lines = result.stdout.strip().split("\n")
+            if lines and lines[0].strip():
+                compute_cap = lines[0].strip()
+        except Exception:
+            pass
+
+        first_gpu = gpu_info[0]
+        vram_gb = first_gpu["memory_total_mb"] / 1024.0
+
+        # Parse major version from compute capability (e.g., "12.0" -> 12)
+        try:
+            major_version = int(compute_cap.split(".")[0])
+        except (ValueError, IndexError):
+            major_version = 0
+
+        return {
+            "vram_gb": round(vram_gb, 1),
+            "compute_capability": compute_cap,
+            "gpu_name": first_gpu["name"],
+            "gpu_count": len(gpu_info),
+            "high_vram": vram_gb >= 80.0,
+            "is_blackwell": major_version >= 12,
+        }
+    except Exception:
+        return defaults
+
+
 def render_gpu_selector(default_value: int = 1, allow_gpu_selection: bool = True, num_heads: int | None = None) -> tuple[int, list[int] | None]:
     """
     Render GPU selection widget with visual memory usage indicators.
