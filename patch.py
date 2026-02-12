@@ -37,6 +37,8 @@ PATCH_FILES = [
     "wan/utils/system_prompt.py",
     "wan/configs/shared_config.py",
     "wan/configs/wan_animate_14B.py",
+    "wan/text2video.py",
+    "wan/image2video.py",
 ]
 
 
