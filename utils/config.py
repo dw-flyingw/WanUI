@@ -84,7 +84,7 @@ else:
     OUTPUT_ROOT = Path(OUTPUT_PATH)
 
 PREPROCESS_SCRIPT = WAN2_2_ROOT / "wan" / "modules" / "animate" / "preprocess" / "preprocess_data.py"
-GENERATE_SCRIPT = WAN2_2_ROOT / "generate.py"
+GENERATE_SCRIPT = FRONTEND_ROOT / "patches" / "generate.py"
 
 # Ensure output directory exists
 OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)

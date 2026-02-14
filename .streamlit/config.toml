@@ -2,6 +2,8 @@
 port = 8560
 baseUrlPath = ""
 address = "0.0.0.0"
+enableCORS = false
+enableXsrfProtection = false
 
 [theme]
 base = "dark"

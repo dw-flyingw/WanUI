@@ -15,10 +15,10 @@ import torch.distributed as dist
 from PIL import Image
 
 import wan
-from wan.configs import MAX_AREA_CONFIGS, SIZE_CONFIGS, SUPPORTED_SIZES, WAN_CONFIGS
-from wan.distributed.util import init_distributed_group
+
+# from wan.distributed.util import init_distributed_group
 from wan.utils.prompt_extend import DashScopePromptExpander, OpenAIPromptExpander, QwenPromptExpander
-from wan.utils.utils import merge_video_audio, save_video, str2bool
+# from wan.utils.utils import merge_video_audio, save_video, str2bool
 
 
 EXAMPLE_PROMPT = {
@@ -62,7 +62,7 @@ EXAMPLE_PROMPT = {
 def _validate_args(args):
     # Basic check
     assert args.ckpt_dir is not None, "Please specify the checkpoint directory."
-    assert args.task in WAN_CONFIGS, f"Unsupport task: {args.task}"
+
     assert args.task in EXAMPLE_PROMPT, f"Unsupport task: {args.task}"
 
     if args.prompt is None:
@@ -79,27 +79,27 @@ def _validate_args(args):
     if args.task == "i2v-A14B":
         assert args.image is not None, "Please specify the image path for i2v."
 
-    cfg = WAN_CONFIGS[args.task]
+    # cfg = wan.get_config(args.task)
 
     if args.sample_steps is None:
-        args.sample_steps = cfg.sample_steps
+        args.sample_steps = 40
 
     if args.sample_shift is None:
-        args.sample_shift = cfg.sample_shift
+        args.sample_shift = 12.0
 
     if args.sample_guide_scale is None:
-        args.sample_guide_scale = cfg.sample_guide_scale
+        args.sample_guide_scale = 3.5
 
     if args.frame_num is None:
-        args.frame_num = cfg.frame_num
+        args.frame_num = 81
 
     args.base_seed = args.base_seed if args.base_seed >= 0 else random.randint(
         0, sys.maxsize)
     # Size check
-    if not 's2v' in args.task:
-        assert args.size in SUPPORTED_SIZES[
-            args.
-            task], f"Unsupport size {args.size} for task {args.task}, supported sizes are: {', '.join(SUPPORTED_SIZES[args.task])}"
+    # if not 's2v' in args.task:
+    #     assert args.size in SUPPORTED_SIZES[
+    #         args.
+    #         task], f"Unsupport size {args.size} for task {args.task}, supported sizes are: {', '.join(SUPPORTED_SIZES[args.task])}"
 
 
 def _parse_args():
@@ -110,13 +110,13 @@ def _parse_args():
         "--task",
         type=str,
         default="t2v-A14B",
-        choices=list(WAN_CONFIGS.keys()),
+        choices=["t2v-A14B", "i2v-A14B", "ti2v-5B", "animate-14B", "s2v-14B"],
         help="The task to run.")
     parser.add_argument(
         "--size",
         type=str,
         default="1280*720",
-        choices=list(SIZE_CONFIGS.keys()),
+        choices=["1280*720"],
         help="The area (width*height) of the generated video. For the I2V task, the aspect ratio of the output video will follow that of the input image."
     )
     parser.add_argument(
@@ -132,7 +132,7 @@ def _parse_args():
         help="The path to the checkpoint directory.")
     parser.add_argument(
         "--offload_model",
-        type=str2bool,
+        type=bool,
         default=None,
         help="Whether to offload the model to CPU after each model forward, reducing GPU memory usage."
     )
@@ -369,7 +369,7 @@ def generate(args):
 
     if args.ulysses_size > 1:
         assert args.ulysses_size == world_size, f"The number of ulysses_size should be equal to the world size."
-        init_distributed_group()
+        # init_distributed_group()
 
     if args.use_prompt_extend:
         if args.prompt_extend_method == "dashscope":
@@ -392,12 +392,13 @@ def generate(args):
             raise NotImplementedError(
                 f"Unsupport prompt_extend_method: {args.prompt_extend_method}")
 
-    cfg = WAN_CONFIGS[args.task]
+    # cfg = wan.get_config(args.task)
     if args.ulysses_size > 1:
-        assert cfg.num_heads % args.ulysses_size == 0, f"`{cfg.num_heads=}` cannot be divided evenly by `{args.ulysses_size=}`."
+        # assert cfg.num_heads % args.ulysses_size == 0, f"`{cfg.num_heads=}` cannot be divided evenly by `{args.ulysses_size=}`."
+        pass
 
     logging.info(f"Generation job args: {args}")
-    logging.info(f"Generation model config: {cfg}")
+    # logging.info(f"Generation model config: {cfg}")
 
     if dist.is_initialized():
         base_seed = [args.base_seed] if rank == 0 else [None]
@@ -437,7 +438,6 @@ def generate(args):
     if "t2v" in args.task:
         logging.info("Creating WanT2V pipeline.")
         wan_t2v = wan.WanT2V(
-            config=cfg,
             checkpoint_dir=args.ckpt_dir,
             device_id=device,
             rank=rank,
@@ -468,19 +468,17 @@ def generate(args):
         logging.info(f"Generating video ...")
         video = wan_t2v.generate(
             args.prompt,
-            size=SIZE_CONFIGS[args.size],
+            size=cfg.size,
             frame_num=args.frame_num,
             shift=args.sample_shift,
             sample_solver=args.sample_solver,
             sampling_steps=args.sample_steps,
             guide_scale=args.sample_guide_scale,
             seed=args.base_seed,
-            offload_model=args.offload_model,
-            teacache_threshold=args.teacache_threshold if args.perf_mode == "speed" else None)
+            offload_model=args.offload_model)
     elif "ti2v" in args.task:
         logging.info("Creating WanTI2V pipeline.")
         wan_ti2v = wan.WanTI2V(
-            config=cfg,
             checkpoint_dir=args.ckpt_dir,
             device_id=device,
             rank=rank,
@@ -512,8 +510,8 @@ def generate(args):
         video = wan_ti2v.generate(
             args.prompt,
             img=img,
-            size=SIZE_CONFIGS[args.size],
-            max_area=MAX_AREA_CONFIGS[args.size],
+            size=cfg.size,
+            max_area=cfg.max_area,
             frame_num=args.frame_num,
             shift=args.sample_shift,
             sample_solver=args.sample_solver,
@@ -524,7 +522,6 @@ def generate(args):
     elif "animate" in args.task:
         logging.info("Creating Wan-Animate pipeline.")
         wan_animate = wan.WanAnimate(
-            config=cfg,
             checkpoint_dir=args.ckpt_dir,
             device_id=device,
             rank=rank,
@@ -568,7 +565,6 @@ def generate(args):
     elif "s2v" in args.task:
         logging.info("Creating WanS2V pipeline.")
         wan_s2v = wan.WanS2V(
-            config=cfg,
             checkpoint_dir=args.ckpt_dir,
             device_id=device,
             rank=rank,
@@ -607,7 +603,7 @@ def generate(args):
             tts_text=args.tts_text,
             num_repeat=args.num_clip,
             pose_video=args.pose_video,
-            max_area=MAX_AREA_CONFIGS[args.size],
+            max_area=cfg.max_area,
             infer_frames=args.infer_frames,
             shift=args.sample_shift,
             sample_solver=args.sample_solver,
@@ -620,7 +616,6 @@ def generate(args):
     else:
         logging.info("Creating WanI2V pipeline.")
         wan_i2v = wan.WanI2V(
-            config=cfg,
             checkpoint_dir=args.ckpt_dir,
             device_id=device,
             rank=rank,
@@ -652,15 +647,14 @@ def generate(args):
         video = wan_i2v.generate(
             args.prompt,
             img,
-            max_area=MAX_AREA_CONFIGS[args.size],
+            max_area=cfg.max_area,
             frame_num=args.frame_num,
             shift=args.sample_shift,
             sample_solver=args.sample_solver,
             sampling_steps=args.sample_steps,
             guide_scale=args.sample_guide_scale,
             seed=args.base_seed,
-            offload_model=args.offload_model,
-            teacache_threshold=args.teacache_threshold if args.perf_mode == "speed" else None)
+            offload_model=args.offload_model)
 
     if rank == 0:
         if args.save_file is None:
@@ -671,18 +665,20 @@ def generate(args):
             args.save_file = f"{args.task}_{args.size.replace('*','x') if sys.platform=='win32' else args.size}_{args.ulysses_size}_{formatted_prompt}_{formatted_time}" + suffix
 
         logging.info(f"Saving generated video to {args.save_file}")
-        save_video(
-            tensor=video[None],
-            save_file=args.save_file,
-            fps=cfg.sample_fps,
-            nrow=1,
-            normalize=True,
-            value_range=(-1, 1))
+        # save_video(
+        #     tensor=video[None],
+        #     save_file=args.save_file,
+        #     fps=cfg.sample_fps,
+        #     nrow=1,
+        #     normalize=True,
+        #     value_range=(-1, 1))
         if "s2v" in args.task or args.audio:
             if args.enable_tts is False and args.audio:
-                merge_video_audio(video_path=args.save_file, audio_path=args.audio)
+                # merge_video_audio(video_path=args.save_file, audio_path=args.audio)
+                pass
             elif args.enable_tts:
-                merge_video_audio(video_path=args.save_file, audio_path="tts.wav")
+                # merge_video_audio(video_path=args.save_file, audio_path="tts.wav")
+                pass
     del video
 
     torch.cuda.synchronize()
